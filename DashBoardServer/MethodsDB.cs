@@ -1007,7 +1007,7 @@ namespace DashBoardServer
             }
             else res.Add("ERROR");
         }
-        public void updateTestOfPack(Message mess)
+        public void UpdateTestOfPack(Message mess)
         {
             database.OpenConnection();
             Tests te = new Tests();
@@ -1022,6 +1022,22 @@ namespace DashBoardServer
                 {
                     if (te.id[j].Equals(mess.args[2]))
                     {
+                        if (mess.args[3].Equals("первый"))
+                        {
+                            int i = te.start.IndexOf("первый");
+                            te.start[i] = te.start[j];
+                        }
+                        else
+                        {
+                            int i = te.start.IndexOf(mess.args[3]);
+                            if (i != -1)
+                                te.start[i] = te.start[j];
+                            else
+                            {
+                                i = te.id.IndexOf(mess.args[3]);
+                                te.start[i] = te.start[j];
+                            }
+                        }
                         te.start[j] = mess.args[3];
                         te.dependon[j] = mess.args[4];
                         te.time[j] = mess.args[5];
@@ -1035,7 +1051,7 @@ namespace DashBoardServer
             string teS = JsonConvert.SerializeObject(te);
             query = "UPDATE packs SET `tests` = @tests WHERE `id` = @id AND `service` = @service";
             command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[2]);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@tests", teS);
             command.Parameters.AddWithValue("@service", mess.args[0]);
 
@@ -1044,7 +1060,7 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog("{0} update test", UpdateTest.ToString());
 
-            res.Add("OK");
+            res.Add("ok");
         }
         /*возвращает список где 1 запись имя а остальные комментарии*/
         public Comments readTextOfTest(string service, string testId)
