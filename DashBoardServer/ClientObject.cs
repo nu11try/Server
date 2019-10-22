@@ -20,7 +20,7 @@ namespace DashBoardServer
 
         public void Process()
         {
-            NetworkStream stream = null;
+            NetworkStream stream = null;            
             try
             {
                 stream = client.GetStream();
