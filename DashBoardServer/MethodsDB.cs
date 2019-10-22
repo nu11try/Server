@@ -944,8 +944,13 @@ namespace DashBoardServer
         public void StartTests(Message mess)
         {
             StartTests startTests = new StartTests();
+
             SQLiteDataReader SelectResult;
+            SQLiteDataReader SelectResult1;
+            Database database1 = new Database();
+
             Message request = new Message();
+            Tests tests = new Tests();
 
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
             command = new SQLiteCommand(query, database.connect);
@@ -986,12 +991,30 @@ namespace DashBoardServer
                     if (SelectResult.HasRows)
                     {
                         while (SelectResult.Read())
-                        {
-                            request.Add(mess.args[i], SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString());
+                        {                                                        
+                            tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                            for(int j = 0; j < tests.id.Count; j++)
+                            {
+                                query = "SELECT `path` FROM dirs WHERE `service` = @service AND `test` = @test";
+                                command = new SQLiteCommand(query, database.connect);
+                                command.Parameters.AddWithValue("@service", mess.args[0]);
+                                command.Parameters.AddWithValue("@test", tests.id[j]);
+                                database.OpenConnection();
+                                SelectResult1 = command.ExecuteReader();
+                                if (SelectResult1.HasRows)
+                                {
+                                    while (SelectResult1.Read())
+                                    {
+                                        request.Add(mess.args[i], SelectResult1["path"].ToString(), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString());                                        
+                                    }
+                                }
+                                SelectResult1.Close();
+                                //database1.CloseConnection();
+                            }
                         }
-                    }
+                    }                    
                     SelectResult.Close();
-                    database.CloseConnection();
+                    database.CloseConnection();                    
 
                     /*query = "UPDATE packs SET `Status` = 'start' WHERE `id_pack` = @id";
                     command = new SQLiteCommand(query, database.connect);

@@ -70,12 +70,12 @@ namespace DashBoardServer
             if (response.args.Count > 0)
             {
                 service = response.args[0];
-                tests = JsonConvert.DeserializeObject<Tests>(response.args[3]);
+                tests = JsonConvert.DeserializeObject<Tests>(response.args[4]);
                 for (int i = 0; i < response.args.Count; i++)
                 {
                     NAMEPACK = response.args[0];
-                    IPPC = response.args[1].Split(' ')[2];
-                    TimePack = Int32.Parse(response.args[2]);
+                    IPPC = response.args[2].Split(' ')[2];
+                    TimePack = Int32.Parse(response.args[3]);
 
                     for (int k = 0; k < tests.id.Count; k++)
                     {
@@ -83,7 +83,7 @@ namespace DashBoardServer
                         // заполнение словаря зависимостей
                         // название теста - это ключ
                         // а его значение - это его зависимость
-                        //dirsRes.Add(response[i][k].Split('±')[response[i][k].Split('±').Length - 1]);
+                        dirsRes.Add(response.args[1]);
                         dependonTests.Add(tests.id[k], tests.dependon[k]);
                         
                     }
