@@ -130,22 +130,23 @@ namespace DashBoardServer
             string bufStr1 = "";
             string bufStr2 = "";
             double bufInt = 0;
-            query = "INSERT INTO statistic (`Steps`, `Time`, `TimeLose`, `Result`, `NameTest`, `Service`, `Date`, `Version`, `TimeCount`)" +
-                "VALUES (@step, @etime, @ltime, @result, @nametest, @service, @date, @version, @timeCount)";
+            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
             command = new SQLiteCommand(query, database.connect);
             for (int i = 0; i < steps.Count; i++) bufStr += steps[i] + "\n";
             for (int i = 0; i < eTime.Count; i++) bufStr1 += eTime[i] + "\n";
             for (int i = 0; i < eTime.Count; i++) bufInt += Double.Parse(eTime[i]);
             for (int i = 0; i < lTime.Count; i++) bufStr2 += lTime[i] + "\n";
-            command.Parameters.AddWithValue("@step", bufStr);
-            command.Parameters.AddWithValue("@etime", bufStr1);
-            command.Parameters.AddWithValue("@ltime", bufStr2);
-            command.Parameters.AddWithValue("@result", resultTest[resultTest.Count - 1][0]);
-            command.Parameters.AddWithValue("@nametest", nameTest);
+            command.Parameters.AddWithValue("@id", nameTest);
+            command.Parameters.AddWithValue("@test", nameTest);
             command.Parameters.AddWithValue("@service", service);
+            command.Parameters.AddWithValue("@result", resultTest[resultTest.Count - 1][0]);
+            command.Parameters.AddWithValue("@time_step", bufStr1);
+            command.Parameters.AddWithValue("@time_end", bufInt.ToString());
+            command.Parameters.AddWithValue("@time_lose", bufStr2);
+            command.Parameters.AddWithValue("@steps", bufStr);
             command.Parameters.AddWithValue("@date", data);
             command.Parameters.AddWithValue("@version", "TEST");
-            command.Parameters.AddWithValue("@timeCount", bufInt.ToString());
             database.OpenConnection();
             var InsertTesult = command.ExecuteNonQuery();
             database.CloseConnection();
@@ -157,18 +158,20 @@ namespace DashBoardServer
         {
             if (options == "dependen_error")
             {
-                query = "INSERT INTO statistic (`Steps`, `Time`, `TimeLose`, `Result`, `NameTest`, `Service`, `Date`, `Version`, `TimeCount`)" +
-                    "VALUES (@step, @etime, @ltime, @result, @nametest, @service, @date, @version, @timeCount)";
+                query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
                 command = new SQLiteCommand(query, database.connect);
-                command.Parameters.AddWithValue("@step", "DEPENDEN ERROR");
-                command.Parameters.AddWithValue("@etime", "DEPENDEN ERROR");
-                command.Parameters.AddWithValue("@ltime", "DEPENDEN ERROR");
-                command.Parameters.AddWithValue("@result", "Failed");
-                command.Parameters.AddWithValue("@nametest", nameTest);
+
+                command.Parameters.AddWithValue("@id", nameTest);
+                command.Parameters.AddWithValue("@test", nameTest);
                 command.Parameters.AddWithValue("@service", service);
+                command.Parameters.AddWithValue("@result", "Failed");
+                command.Parameters.AddWithValue("@time_step", "DEPENDEN ERROR");
+                command.Parameters.AddWithValue("@time_end", "DEPENDEN ERROR");
+                command.Parameters.AddWithValue("@time_lose", "DEPENDEN ERROR");
+                command.Parameters.AddWithValue("@steps", "DEPENDEN ERROR");
                 command.Parameters.AddWithValue("@date", data);
                 command.Parameters.AddWithValue("@version", "TEST");
-                command.Parameters.AddWithValue("@timeCount", "DEPENDEN ERROR");
                 database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
                 database.CloseConnection();

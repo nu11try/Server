@@ -950,6 +950,7 @@ namespace DashBoardServer
             Database database1 = new Database();
 
             Message request = new Message();
+            Message dirs = new Message();
             Tests tests = new Tests();
 
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
@@ -1005,12 +1006,13 @@ namespace DashBoardServer
                                 {
                                     while (SelectResult1.Read())
                                     {
-                                        request.Add(mess.args[i], SelectResult1["path"].ToString(), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString());                                        
+                                        dirs.Add(SelectResult1["path"].ToString());                                        
                                     }
                                 }
                                 SelectResult1.Close();
                                 //database1.CloseConnection();
                             }
+                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString());
                         }
                     }                    
                     SelectResult.Close();

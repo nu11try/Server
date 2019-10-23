@@ -5,9 +5,8 @@ Dim qtAutoExportResultsOpts 'As QuickTest.AutoExportReportConfigOptions ' Declar
 Dim strStatus
 Dim strTestName
 Dim strLastError
-
-
-Function test_start(a, b)
+	
+Function test_start(a, b)	
 	Set qtApp=createobject("QuickTest.Application") 
 	 If Not qtApp.Launched Then 
 	 qtApp.Launch
@@ -17,13 +16,14 @@ Function test_start(a, b)
 	' Set UFT run options
 	qtApp.Options.Run.RunMode = "Fast"
 	qtApp.Options.Run.ViewResults = False
+	qtApp.Options.Run.EnableRdp = True
 	qtApp.Open a, True ' ' Open the test in read-only mode
 	
 	' Configure the Web application to use with this test
     qtApp.Test.Settings.Launchers("Web").Active = True
     qtApp.Test.Settings.Launchers("Web").SetLab "LocalBrowser"
     qtApp.Test.Settings.Launchers("Web").Browser = "IE"
-    qtApp.Test.Settings.Launchers("Web").Address = "http://eb-arp-itest-sso.otr.ru:7777/udu-webcenter/faces"
+    qtApp.Test.Settings.Launchers("Web").Address = "http://eb-tse-demo-ufos.otr.ru:8889/sufdclient/index.zul"
     qtApp.Test.Settings.Launchers("Web").CloseOnExit = True
     qtApp.Test.Settings.Launchers("Web").RuntimeParameterization = False
     qtApp.visible=False ' qt ����������� � ����� ������
@@ -64,4 +64,4 @@ Function test_start(a, b)
 	Set qtAutoExportResultsOpts = Nothing ' Release the Automatically Export Report Configuration Options object
 	Set qtAutoExportResultsOpts = Nothing ' Release the Automatically Export Report Configuration Options object
 End Function
-Call test_start("\\172.31.197.220\ATST\DEG_AI\Tests\DEG_AI_0503129", "\\172.31.197.220\ATST\DEG_AI\Tests\DEG_AI_0503129\Res1\")
+Call test_start("\\172.31.197.220\ATST\\TSE1\Tests\GUI_MT_CLS_1_1", "\\172.31.197.220\ATST\\TSE1\Tests\GUI_MT_CLS_1_1\Res1\")

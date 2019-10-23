@@ -59,15 +59,5 @@ namespace DashBoardServer.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Byte[].
-        /// </summary>
-        internal static byte[] DashBoardSQL {
-            get {
-                object obj = ResourceManager.GetObject("DashBoardSQL", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }
