@@ -360,7 +360,7 @@ namespace DashBoardServer
                 {
                     while (SelectResult.Read())
                     {
-                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i]);
+                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.dependon[i]);
                     }
                 }
                 else
@@ -759,7 +759,8 @@ namespace DashBoardServer
                 te.restart.Add("default");
                 te.start.Add(i == 0 ? "первый" : tests.args[i - 1]);
                 te.time.Add("default");
-                te.dependon.Add("not");
+                te.dependon.Add("{\"args\":[\"not\"]}");
+
             }
             string teS = JsonConvert.SerializeObject(te);
             query = "INSERT INTO packs (`id`, `name`, `tests`, `time`, `count_restart`, `service`, " +
@@ -1047,26 +1048,10 @@ namespace DashBoardServer
                 {
                     if (te.id[j].Equals(mess.args[2]))
                     {
-                        if (mess.args[3].Equals("первый"))
-                        {
-                            int i = te.start.IndexOf("первый");
-                            te.start[i] = te.start[j];
-                        }
-                        else
-                        {
-                            int i = te.start.IndexOf(mess.args[3]);
-                            if (i != -1)
-                                te.start[i] = te.start[j];
-                            else
-                            {
-                                i = te.id.IndexOf(mess.args[3]);
-                                te.start[i] = te.start[j];
-                            }
-                        }
-                        te.start[j] = mess.args[3];
-                        te.dependon[j] = mess.args[4];
-                        te.time[j] = mess.args[5];
-                        te.restart[j] = mess.args[6];
+                        te.start[j] = mess.args[3].Equals("last") ? te.start[j] : mess.args[3];
+                        te.dependon[j] = mess.args[4].Equals("last") ? te.dependon[j] : mess.args[4];
+                        te.time[j] = mess.args[5].Equals("last") ? te.time[j] : mess.args[5];
+                        te.restart[j] = mess.args[6].Equals("last") ? te.restart[j] : mess.args[6];
                     }
                 }
             }
@@ -1087,6 +1072,57 @@ namespace DashBoardServer
 
             res.Add("ok");
         }
+        public void ChangePositionList(Message mess)
+        {
+            Message ids = JsonConvert.DeserializeObject<Message>(mess.args[2]);
+            database.OpenConnection();
+            Tests te = new Tests();
+            Tests tmp = new Tests();
+            query = "SELECT * FROM packs WHERE `id` = @id";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            while (SelectResult.Read())
+            {
+                te = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                for (int i = 0; i < ids.args.Count; i++)
+                {
+                    int j = te.id.IndexOf(ids.args[i]);
+                    if (i == 0)
+                    {
+                        tmp.start.Add("первый");
+                    }
+                    else
+                    {
+                        tmp.start.Add(ids.args[i - 1]);
+                    }
+                    tmp.id.Add(te.id[j]);
+                    tmp.dependon.Add(te.dependon[j]);
+                    tmp.time.Add(te.time[j]);
+                    tmp.restart.Add(te.restart[j]);
+                }
+            }
+            SelectResult.Close();
+            database.CloseConnection();
+
+
+            string teS = JsonConvert.SerializeObject(tmp);
+            query = "UPDATE packs SET `tests` = @tests WHERE `id` = @id AND `service` = @service";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@tests", teS);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+
+            database.OpenConnection();
+            var UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
+            logger.WriteLog("{0} update test", UpdateTest.ToString());
+
+            res.Add("ok");
+        }
+
+
+
         /*возвращает список где 1 запись имя а остальные комментарии*/
         public Comments readTextOfTest(string service, string testId)
         {
@@ -1166,7 +1202,7 @@ namespace DashBoardServer
                 comments.comment.Add("Отсутствуют комментарии к шагу");
             }
 
-            comments.step.Insert(0, "");            
+            comments.step.Insert(0, "");
             comments.comment.Insert(0, nameTest);
             return comments;
         }
