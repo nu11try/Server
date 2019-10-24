@@ -903,8 +903,36 @@ namespace DashBoardServer
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
-            logger.WriteLog("{0} update pack", UpdateTest.ToString());
+            
 
+            Tests te = JsonConvert.DeserializeObject<Tests>(mess.args[3]);
+            for (int i = 0; i < te.id.Count; i++)
+            {
+                query = "UPDATE tests SET `used` = @used WHERE `id` = @id AND `service` = @service";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", te.id[i]);
+                command.Parameters.AddWithValue("@used", "yes");
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+
+                database.OpenConnection();
+                UpdateTest = command.ExecuteNonQuery();
+                database.CloseConnection();
+            }
+
+            Message removeTe = JsonConvert.DeserializeObject<Message>(mess.args[7]);
+            for (int i = 0; i < removeTe.args.Count; i++)
+            {
+                query = "UPDATE tests SET `used` = @used WHERE `id` = @id AND `service` = @service";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", removeTe.args[i]);
+                command.Parameters.AddWithValue("@used", "no");
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+
+                database.OpenConnection();
+                UpdateTest = command.ExecuteNonQuery();
+                database.CloseConnection();
+            }
+            logger.WriteLog("{0} update pack", UpdateTest.ToString());
             res.Add("OK");
         }      
         public void UpdateDoc(Message mess)
