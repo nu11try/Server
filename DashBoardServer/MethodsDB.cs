@@ -310,10 +310,9 @@ namespace DashBoardServer
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["id"].ToString(),
-                    SelectResult["name"].ToString(), SelectResult["ip"].ToString()
-                    , SelectResult["time"].ToString()
-                    , SelectResult["count_restart"].ToString(), SelectResult["tests"].ToString());
+                while (SelectResult.Read()) res.Add(SelectResult["id"].ToString(), SelectResult["name"].ToString(),
+                    SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["count_restart"].ToString(),
+                    SelectResult["tests"].ToString(), SelectResult["browser"].ToString());
 
             }
             else
@@ -360,7 +359,7 @@ namespace DashBoardServer
                 {
                     while (SelectResult.Read())
                     {
-                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.dependon[i]);
+                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.browser[i], testsPack.dependon[i]);
                     }
                 }
                 else
@@ -382,7 +381,7 @@ namespace DashBoardServer
             string id = mess.args[1];
             string id_pack = mess.args[2];
             Message args = new Message();
-            string argsS = "";
+          //  string argsS = "";
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -397,21 +396,21 @@ namespace DashBoardServer
                     for (int j = 0; j < te.id.Count; j++)
                     {
                         if (te.id[j].Equals(id))
-                            res.Add(te.id[j], te.start[j], te.time[j], te.restart[j], te.dependon[j]);
-                        args.Add(te.id[j]);
+                            res.Add(te.id[j], te.start[j], te.time[j], te.restart[j],te.browser[j]);
+                       // args.Add(te.id[j]);
 
                     }
                 }
-                argsS = JsonConvert.SerializeObject(args);
+               // argsS = JsonConvert.SerializeObject(args);
             }
             else
             {
                 res.Add("error");
             }
-            Console.WriteLine(argsS);
+           // Console.WriteLine(argsS);
             SelectResult.Close();
             database.CloseConnection();
-            res.Add(argsS);
+           // res.Add(argsS);
         }
         /// <summary>
         /// Функция получения результатов теста
@@ -760,21 +759,23 @@ namespace DashBoardServer
                 te.start.Add(i == 0 ? "первый" : tests.args[i - 1]);
                 te.time.Add("default");
                 te.dependon.Add("{\"args\":[\"not\"]}");
+                te.browser.Add("default");
 
             }
             string teS = JsonConvert.SerializeObject(te);
-            query = "INSERT INTO packs (`id`, `name`, `tests`, `time`, `count_restart`, `service`, " +
-                "`ip`, `status`) VALUES (@id, @name, @tests, @time, @count_restart, " +
+            query = "INSERT INTO packs (`id`, `name`, `tests`,`browser`, `time`, `count_restart`, `service`, " +
+                "`ip`, `status`) VALUES (@id, @name, @tests, @browser, @time, @count_restart, " +
                 "@service, @ip, @status)";
             command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[1].ToString());
-            command.Parameters.AddWithValue("@name", mess.args[1].ToString());
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@name", mess.args[1]);
             command.Parameters.AddWithValue("@tests", teS);
-            command.Parameters.AddWithValue("@time", mess.args[3].ToString());
-            command.Parameters.AddWithValue("@count_restart", mess.args[4].ToString());
+            command.Parameters.AddWithValue("@time", mess.args[3]);
+            command.Parameters.AddWithValue("@count_restart", mess.args[4]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@ip", mess.args[5].ToString());
+            command.Parameters.AddWithValue("@ip", mess.args[5]);
             command.Parameters.AddWithValue("@status", "no_start");
+            command.Parameters.AddWithValue("@browser", mess.args[6]);
             database.OpenConnection();
             var InsertPack = command.ExecuteNonQuery();
             database.CloseConnection();
@@ -888,9 +889,8 @@ namespace DashBoardServer
         /// <returns></returns>
         public void UpdatePackChange(Message mess)
         {
-            query = "UPDATE packs SET `name` = @newname," +
-                "`time` = @time, `count_restart` = @restart, `ip` = @ip, " +
-                "`tests` = @tests WHERE `id` = @id_pack AND `service` = @service";
+            query = "UPDATE packs SET `name` = @newname,`time` = @time, `count_restart` = @restart, `ip` = @ip, " +
+                "`tests` = @tests, `browser` = @browser WHERE `id` = @id_pack AND `service` = @service";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@id_pack", mess.args[1]);
             command.Parameters.AddWithValue("@newname", mess.args[2]);
@@ -899,6 +899,7 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@ip", mess.args[6]);
             command.Parameters.AddWithValue("@tests", mess.args[3]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@browser", mess.args[8]);
 
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
@@ -1080,6 +1081,7 @@ namespace DashBoardServer
                         te.dependon[j] = mess.args[4].Equals("last") ? te.dependon[j] : mess.args[4];
                         te.time[j] = mess.args[5].Equals("last") ? te.time[j] : mess.args[5];
                         te.restart[j] = mess.args[6].Equals("last") ? te.restart[j] : mess.args[6];
+                        te.browser[j] = mess.args[7].Equals("last") ? te.browser[j] : mess.args[7];
                     }
                 }
             }
@@ -1104,7 +1106,7 @@ namespace DashBoardServer
         {
             Message ids = JsonConvert.DeserializeObject<Message>(mess.args[2]);
             database.OpenConnection();
-            Tests te = new Tests();
+            Tests te;
             Tests tmp = new Tests();
             query = "SELECT * FROM packs WHERE `id` = @id";
             command = new SQLiteCommand(query, database.connect);
@@ -1128,6 +1130,7 @@ namespace DashBoardServer
                     tmp.dependon.Add(te.dependon[j]);
                     tmp.time.Add(te.time[j]);
                     tmp.restart.Add(te.restart[j]);
+                    tmp.browser.Add(te.browser[j]);
                 }
             }
             SelectResult.Close();
@@ -1244,22 +1247,17 @@ namespace DashBoardServer
             time = new List<string>();
             dependon = new List<string>();
             restart = new List<string>();
+            browser = new List<string>();
         }
         public List<string> id { get; set; }
         public List<string> start { get; set; }
         public List<string> time { get; set; }
         public List<string> dependon { get; set; }
         public List<string> restart { get; set; }
+        public List<string> browser { get; set; }
 
     }
-    public class TestsPack
-    {
-        public TestsPack()
-        {
-            tests = new List<string>();
-        }
-        public List<string> tests { get; set; }
-    }
+
     public class Message
     {
         public Message()
