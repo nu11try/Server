@@ -69,7 +69,7 @@ namespace DashBoardServer
                                             }
                                             if (buf1.Name == "Details")
                                             {
-                                                if (buf1.InnerText.IndexOf("завершена") != -1)
+                                                if (buf1.InnerText.IndexOf("завершена") != -1 || buf1.InnerText.IndexOf("ended") != -1)
                                                 {
                                                     MatchCollection matches = new Regex(@"(\d,)+[0-9]+\S").Matches(buf1.InnerText);
                                                     foreach (Match mat in matches) bufResult.Add(mat.Value);

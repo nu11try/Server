@@ -92,7 +92,6 @@ E:\GitHub\Dashboard_Server\Dashboard_Server\Dashboard_Server\DashBoardServer\obj
 E:\GitHub\Dashboard_Server\Dashboard_Server\Dashboard_Server\DashBoardServer\obj\Debug\DashBoardServer.csproj.CopyComplete
 E:\GitHub\Dashboard_Server\Dashboard_Server\Dashboard_Server\DashBoardServer\obj\Debug\DashBoardServer.exe
 E:\GitHub\Dashboard_Server\Dashboard_Server\Dashboard_Server\DashBoardServer\obj\Debug\DashBoardServer.pdb
-E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardSQL.db
 E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardServer.exe.config
 E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardServer.exe
 E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardServer.pdb

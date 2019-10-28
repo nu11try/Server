@@ -68,18 +68,13 @@ namespace DashBoardServer
                     NAMEPACK = response.args[i + 1];
                     IPPC = response.args[i + 3].Split(' ')[2];
                     TimePack = Int32.Parse(response.args[i + 4]);
-                    for (int k = 0; k < tests.id.Count; k++)
-                    {
-                        NAMETESTS.Add(tests.id[k]);
-                        dependonTests.Add(tests.id[k], tests.dependon[k]);
-                    }
                 }
-                for (int i = 0; i < NAMETESTS.Count; i++)
+                for (int i = 0; i < tests.id.Count; i++)
                 {
                     try
                     {
                         File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/startTests.vbs",
-                            AppDomain.CurrentDomain.BaseDirectory + "test/" + NAMETESTS[i] + ".vbs", true);
+                            AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs", true);
 
                         query = "SELECT * FROM stends WHERE `service` = @service";
                         command = new SQLiteCommand(query, database.connect);
@@ -93,19 +88,19 @@ namespace DashBoardServer
                         SelectResult.Close();
                         database.CloseConnection();
 
-                        ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + NAMETESTS[i] + ".vbs",
+                        ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs",
                             "AddressHost", pathStend);
 
-                        using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + NAMETESTS[i] + ".vbs", FileMode.Append))
+                        using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs", FileMode.Append))
                         {
                             byte[] array = System.Text.Encoding.Default.GetBytes("Call test_start(\"" + "\\" + "\\172.31.197.220\\ATST\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
-                                    + "\\" + NAMETESTS[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
-                                    + "\\" + NAMETESTS[i] + "\\Res1\\" + "\")");
+                                    + "\\" + tests.id[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                    + "\\" + tests.id[i] + "\\Res1\\" + "\")");
                             fstream.Write(array, 0, array.Length);
 
                             // добавляем файл в очередь
-                            files.Enqueue(AppDomain.CurrentDomain.BaseDirectory + "test/" + NAMETESTS[i] + ".vbs");
-                            resultPath.Add("Z:\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + NAMETESTS[i] + "\\Res1\\Report\\Results.xml");
+                            files.Enqueue(AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs");
+                            resultPath.Add("Z:\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + tests.id[i] + "\\Res1\\Report\\Results.xml");
                         }
                         packs.Enqueue(NAMEPACK);
                     }
@@ -116,61 +111,48 @@ namespace DashBoardServer
                     }
                 }
             }
-            int countTests = files.Count;
             string data = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
-            for (int i = 0; i < countTests; i++)
+            Message dependons = new Message();
+            bool flagDep = true;
+            string bufName = "";
+            for (int i = 0; i < files.Count; i++)
             {
                 try
                 {
-                    string bufName = files.Dequeue();
+                    bufName = files.Dequeue();
                     CloseProc();
-                    if (dependonTests[NAMETESTS[i]] == "not")
+                    dependons = JsonConvert.DeserializeObject<Message>(tests.dependon[i]);
+                    if (dependons.args[0] == "not")
                     {
-                        StartTest.StartInfo.FileName = bufName;
-                        StartTest.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                        StartTest.StartInfo.UseShellExecute = true;
-                        StartTest.StartInfo.LoadUserProfile = true;
-                        StartTest.Start();
-
-                        Console.WriteLine("Ждем поток");
-                        tm = new TimerCallback(CloseUFT);
-                        timer = new Timer(tm, TimeOut, 1000, 1000);
-
-                        StartTest.WaitForExit();
-
-                        resultTests.Add(NAMETESTS[i], fs.ResultTest(service, NAMETESTS[i], resultPath[i], data));
+                        StartScript(bufName);
+                        resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
                     }
                     else
                     {
                         try
                         {
-                            if (resultTests[dependonTests[NAMETESTS[i]]] == "Failed")
+                            foreach (var resDep in dependons.args)
                             {
-                                resultTests.Add(NAMETESTS[i], fs.ResultTest(service, NAMETESTS[i], resultPath[i], data, "dependen_error"));
+                                if (resultTests[resDep].Equals("Failed"))
+                                {
+                                    flagDep = false;
+                                    break;
+                                }
+                            }
+                            if (!flagDep)
+                            {
+                                resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data, "dependen_error"));
                                 continue;
                             }
                             else
                             {
-                                StartTest.StartInfo.FileName = bufName;
-                                StartTest.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                                StartTest.StartInfo.UseShellExecute = true;
-                                StartTest.StartInfo.LoadUserProfile = true;
-                                StartTest.Start();
-
-                                Console.WriteLine("Ждем поток");
-                                tm = new TimerCallback(CloseUFT);
-                                timer = new Timer(tm, TimeOut, 1000, 1000);
-
-                                StartTest.WaitForExit();
-
-                                //resultTests.Add(NAMETESTS[i], fs.ResultTest(service, NAMETESTS[i], resultPath[i], data));
+                                StartScript(bufName);
+                                resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
                             }
                         }
                         catch (Exception ex)
                         { Console.WriteLine(ex.Message); }
-                    }
-                    // переделать удаление
-                    DeleteResDirectories(NAMETESTS[i], dirsRes[i]);
+                    }                  
                     Console.WriteLine("Тест " + bufName + " выполнен!");
                     logger.WriteLog("[ЗАПУСК ТЕСТОВ] " + bufName, "START");
                     try { TimeOut = 0; } catch { }
@@ -180,25 +162,43 @@ namespace DashBoardServer
                 {
                     Console.WriteLine(ex.Message);
                 }
-                if (files.Count == 0)
-                {
-                    CloseProc();
-                    TimePack = 0;
-
-                    foreach (var count in response.args)
-                    {
-                        string bufName = packs.Dequeue();
-                        query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
-                        command = new SQLiteCommand(query, database.connect);
-                        command.Parameters.AddWithValue("@id", bufName);
-                        database.OpenConnection();
-                        var UpdateTest = command.ExecuteNonQuery();
-                        database.CloseConnection();
-                        logger.WriteLog("[СТАТУС НАБОРА ОБНОВЛЕН] " + bufName, "START");
-                        Console.WriteLine("Статус набора " + bufName + " обновлен!");
-                    }
-                }
             }
+            Finish(response, packs, tests, resultPath);
+        }
+
+        public void Finish(Message response, Queue<string> packs, Tests tests, List<string> resultPath)
+        {
+            CloseProc();
+            TimePack = 0;
+            string bufName = "";
+
+            for (int i = 0; i < packs.Count; i++)
+            {
+                bufName = packs.Dequeue();
+                query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", bufName);
+                database.OpenConnection();
+                var UpdateTest = command.ExecuteNonQuery();
+                database.CloseConnection();
+                logger.WriteLog("[СТАТУС НАБОРА ОБНОВЛЕН] " + bufName, "START");
+                Console.WriteLine("Статус набора " + bufName + " обновлен!");
+            }
+            for (int i = 0; i < tests.id.Count; i++) DeleteResDirectories(tests.id[i], resultPath[i]);
+        }
+        public void StartScript(string bufName)
+        {
+            StartTest.StartInfo.FileName = bufName;
+            StartTest.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            StartTest.StartInfo.UseShellExecute = true;
+            StartTest.StartInfo.LoadUserProfile = true;
+            StartTest.Start();
+
+            Console.WriteLine("Ждем поток");
+            tm = new TimerCallback(CloseUFT);
+            timer = new Timer(tm, TimeOut, 1000, 1000);
+
+            StartTest.WaitForExit();
         }
         public void CloseUFT(object timeout)
         {
@@ -224,6 +224,12 @@ namespace DashBoardServer
             try { foreach (Process proc in Process.GetProcessesByName("iexplore")) proc.Kill(); }
             catch (Exception ex) { Console.WriteLine(ex.Message); }
 
+            try { foreach (Process proc in Process.GetProcessesByName("phantomjs")) proc.Kill(); }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+
+            try { foreach (Process proc in Process.GetProcessesByName("chrome")) proc.Kill(); }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
+
             try { foreach (Process proc in Process.GetProcessesByName("Mediator64")) proc.Kill(); }
             catch (Exception ex) { Console.WriteLine(ex.Message); }
 
@@ -239,7 +245,7 @@ namespace DashBoardServer
         public void DeleteResDirectories(String nameTest, String dir)
         {
             String[] tmp = dir.Split('\\');
-            String dirs = "Z:\\" + tmp[0] + "\\" + tmp[1] + "\\" + nameTest;
+            String dirs = tmp[0] + "\\" + tmp[2] + "\\" + tmp[3] + "\\" + nameTest;
             Console.WriteLine(dirs);
             string[] ress = Directory.GetDirectories(dirs);
             foreach (string res in ress)

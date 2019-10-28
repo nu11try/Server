@@ -1042,7 +1042,7 @@ namespace DashBoardServer
                                 SelectResult1.Close();
                                 //database1.CloseConnection();
                             }
-                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString());
+                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString(), SelectResult["browser"].ToString());
                         }
                     }                    
                     SelectResult.Close();
