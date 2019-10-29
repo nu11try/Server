@@ -459,7 +459,7 @@ namespace DashBoardServer
                 while (SelectResult.Read())
                 {
                     res.Add(SelectResult["date"].ToString(), SelectResult["result"].ToString(), 
-                        SelectResult["version"].ToString(), SelectResult["time_end"].ToString());
+                        SelectResult["version"].ToString(), SelectResult["time_end"].ToString(), SelectResult["id"].ToString());
                 }
             }
             else
