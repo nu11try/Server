@@ -13,6 +13,9 @@ namespace DashBoardServer
     {
         public TcpClient client;
         MethodsDB methodsDB = new MethodsDB();
+        FreeRAM freeRAM = new FreeRAM();
+
+        byte[] data;
         public ClientObject(TcpClient tcpClient)
         {
             client = tcpClient;
@@ -24,7 +27,7 @@ namespace DashBoardServer
             try
             {
                 stream = client.GetStream();
-                byte[] data = new byte[9999999]; // буфер для получаемых данных
+                data = new byte[9999999]; // буфер для получаемых данных
                                               // получаем сообщение
                 StringBuilder builder = new StringBuilder();
                 int bytes = 0;
@@ -37,7 +40,7 @@ namespace DashBoardServer
                 string buf = methodsDB.transformation(builder.ToString());
                 data = Encoding.Unicode.GetBytes(buf);
                 stream.Write(data, 0, data.Length);
-                builder.Clear();
+                builder.Clear();                
             }
             catch (Exception ex)
             {
@@ -46,9 +49,11 @@ namespace DashBoardServer
             finally
             {
                 if (stream != null)
-                    stream.Close();
+                    stream.Close();                  
                 if (client != null)
                     client.Close();
+
+                freeRAM.Free();
             }
         }
     }

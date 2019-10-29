@@ -15,6 +15,7 @@ namespace DashBoardServer
     public class StartTests
     {
         private Database database = new Database();
+        FreeRAM freeRAM = new FreeRAM();
         private SQLiteCommand command;
         private Logger logger = new Logger();
         private string query = "";
@@ -115,6 +116,7 @@ namespace DashBoardServer
             Message dependons = new Message();
             bool flagDep = true;
             string bufName = "";
+            foreach (var el in files) Console.WriteLine(el);
             for (int i = 0; i < files.Count; i++)
             {
                 try
@@ -163,7 +165,7 @@ namespace DashBoardServer
                     Console.WriteLine(ex.Message);
                 }
             }
-            Finish(response, packs, tests, resultPath);
+            Finish(response, packs, tests, resultPath);            
         }
 
         public void Finish(Message response, Queue<string> packs, Tests tests, List<string> resultPath)
@@ -185,6 +187,7 @@ namespace DashBoardServer
                 Console.WriteLine("Статус набора " + bufName + " обновлен!");
             }
             for (int i = 0; i < tests.id.Count; i++) DeleteResDirectories(tests.id[i], resultPath[i]);
+            freeRAM.Free();
         }
         public void StartScript(string bufName)
         {

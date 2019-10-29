@@ -73,6 +73,7 @@
     <Compile Include="ClientObject.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="FileSystem.cs" />
+    <Compile Include="FreeRAM.cs" />
     <Compile Include="MethodsDB.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Server.cs" />
