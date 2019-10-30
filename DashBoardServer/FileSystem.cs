@@ -22,6 +22,23 @@ namespace DashBoardServer
         XmlNode attr;
         XmlDocument xDoc = new XmlDocument();
 
+        public string TypeResultTest(string resultPath)
+        {
+            string result = "";
+            xDoc.Load(resultPath);
+            XmlElement xRoot = xDoc.DocumentElement;
+            foreach (XmlNode xNode in xRoot)
+            {
+                foreach (XmlNode children in xNode.ChildNodes)
+                {
+                    if (children.Name == "NodeArgs")
+                    {
+                        result = children.Attributes.GetNamedItem("status").Value;
+                    }
+                }
+            }
+            return result;
+        }
         public string ResultTest(string service, string nameTest, string resultPath, string data)
         {
             // в конце - статус теста
@@ -170,6 +187,27 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@time_end", "DEPENDEN ERROR");
                 command.Parameters.AddWithValue("@time_lose", "DEPENDEN ERROR");
                 command.Parameters.AddWithValue("@steps", "DEPENDEN ERROR");
+                command.Parameters.AddWithValue("@date", data);
+                command.Parameters.AddWithValue("@version", "TEST");
+                database.OpenConnection();
+                var InsertTesult = command.ExecuteNonQuery();
+                database.CloseConnection();
+                logger.WriteLog("Добавлена статистика для теста " + nameTest);
+            }
+            else if (options == "time_out")
+            {
+                query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
+                command = new SQLiteCommand(query, database.connect);
+
+                command.Parameters.AddWithValue("@id", nameTest);
+                command.Parameters.AddWithValue("@test", nameTest);
+                command.Parameters.AddWithValue("@service", service);
+                command.Parameters.AddWithValue("@result", "Failed");
+                command.Parameters.AddWithValue("@time_step", "TIMEOUT");
+                command.Parameters.AddWithValue("@time_end", "TIMEOUT");
+                command.Parameters.AddWithValue("@time_lose", "TIMEOUT");
+                command.Parameters.AddWithValue("@steps", "TIMEOUT");
                 command.Parameters.AddWithValue("@date", data);
                 command.Parameters.AddWithValue("@version", "TEST");
                 database.OpenConnection();
