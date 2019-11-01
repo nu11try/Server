@@ -214,6 +214,17 @@ namespace DashBoardServer
                     res.Add(SelectResult["id"].ToString());
                     res.Add(SelectResult["name"].ToString());
                     res.Add(SelectResult["author"].ToString());
+                    string query1 = "SELECT * FROM kp WHERE `service` = @service AND `test` = @test";
+                    SQLiteCommand command1 = new SQLiteCommand(query1, database.connect);
+                    command1.Parameters.AddWithValue("@service", mess.args[0]);
+                    command1.Parameters.AddWithValue("@test", mess.args[1]);
+                    SQLiteDataReader SelectResult1 = command1.ExecuteReader();
+                    if (SelectResult1.HasRows)
+                    {
+                        SelectResult1.Read();
+                        res.Add(SelectResult1["id"].ToString());
+                    }
+                    SelectResult1.Close();
                 }
             }
             SelectResult.Close();
@@ -420,7 +431,7 @@ namespace DashBoardServer
         public void GetTestResult(Message mess)
         {
             // хз на сколько это правильно, но это блять работает
-            query = "SELECT * FROM statistic WHERE `service` = @service GROUP BY `id` ORDER BY DATE DESC";
+            query = "SELECT * FROM statistic WHERE `service` = @service ORDER BY number DESC";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
@@ -449,7 +460,7 @@ namespace DashBoardServer
         public void GetTestResultInfo(Message mess)
         {
 
-            query = "SELECT * FROM statistic WHERE `service` = @service ORDER BY DATE DESC";
+            query = "SELECT * FROM statistic WHERE `service` = @service ORDER BY number DESC";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
@@ -559,23 +570,41 @@ namespace DashBoardServer
         /// <returns></returns>
         public void GetKPInfo(Message mess)
         {
-            query = "SELECT * FROM kp WHERE `service` = @service AND `id_doc` = @id AND `id` = @id_kp";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@id", mess.args[1]);
-            command.Parameters.AddWithValue("@id_kp", mess.args[2]);
-            database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            string id_doc = mess.args[1].Equals("") ? "" : "AND `id_doc` = @id_doc ";
+            string id_kp = mess.args[2].Equals("") ? "" : "AND `id` = @id_kp ";
+            string test = mess.args[3].Equals("") ? "" : "AND `test` = @test ";
+            if (!id_doc.Equals("") || !id_kp.Equals("") || !test.Equals(""))
             {
-                while (SelectResult.Read()) res.Add(SelectResult["id"].ToString(),
-                    SelectResult["name"].ToString(), SelectResult["date"].ToString());
-            }
-            else
-            {
-                res.Add("error");
-            }
-            SelectResult.Close();
+                query = "SELECT * FROM kp WHERE `service` = @service " + test + id_doc + id_kp;
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@id_doc", mess.args[1]);
+                command.Parameters.AddWithValue("@id_kp", mess.args[2]);
+                command.Parameters.AddWithValue("@test", mess.args[3]);
+                database.OpenConnection();
+                SQLiteDataReader SelectResult = command.ExecuteReader();
+                if (SelectResult.HasRows)
+                {
+                    while (SelectResult.Read())
+                    {
+                        
+                        string query1 = "SELECT * FROM doc WHERE `service` = @service AND `id` = @id";
+                        SQLiteCommand command1 = new SQLiteCommand(query1, database.connect);
+                        command1.Parameters.AddWithValue("@service", mess.args[0]);
+                        command1.Parameters.AddWithValue("@id", SelectResult["id_doc"].ToString());
+                        database.OpenConnection();
+                        SQLiteDataReader SelectResult1 = command1.ExecuteReader();
+                        SelectResult1.Read();
+                        res.Add(SelectResult["id"].ToString(), SelectResult["name"].ToString(), SelectResult["date"].ToString(), SelectResult1["id"].ToString());
+                    }
+                }
+                else
+                {
+                    res.Add("error");
+                }
+                SelectResult.Close();
+            } else res.Add("error");
+            
             database.CloseConnection();
         }
         /// <summary>
@@ -673,8 +702,10 @@ namespace DashBoardServer
             Comments comments = readTextOfTest(mess.args[0], mess.args[1]);
             foreach (var el in mess.args) Console.WriteLine(el);
             string name = comments.comment[0];
-            comments.comment.ElementAt(0);
             comments.comment.RemoveAt(0);
+            string steps = comments.comment[0];
+            comments.comment.RemoveAt(0);
+            comments.step.RemoveAt(0);
             comments.step.RemoveAt(0);
             string commS = JsonConvert.SerializeObject(comments);
             query = "UPDATE tests SET `name` = @name,`service` = @service, `status` = @status, " +
@@ -691,19 +722,23 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@used", "no");
             command.Parameters.AddWithValue("@earlyStatus", "no_add");
             database.OpenConnection();
-            var InsertTesult = command.ExecuteNonQuery();
+            var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
-            logger.WriteLog("{0} create test", InsertTesult.ToString());
 
+            logger.WriteLog("{0} create test", UpdateTest.ToString());
+            query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
+                "WHERE `id` = @id and `service` = @service";
 
-            /*query = "UPDATE kp SET `test` = @test, WHERE `name` = @name AND `service` = @service";
+            command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
-            command.Parameters.AddWithValue("@name", mess.args[3]);
+            command.Parameters.AddWithValue("@id", mess.args[4]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@steps", steps.ToString());
             database.OpenConnection();
-            InsertTesult = command.ExecuteNonQuery();
+            UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
-            logger.WriteLog("{0} update kp", InsertTesult.ToString());*/
+
+
             res.Add("OK");
         }
         /// <summary>
@@ -827,8 +862,11 @@ namespace DashBoardServer
         public void UpdateTest(Message mess)
         {
             Comments comments = readTextOfTest(mess.args[0], mess.args[1]);
-            string name = comments.comment.ElementAt(0);
+            string name = comments.comment[0];
             comments.comment.RemoveAt(0);
+            string steps = comments.comment[0];
+            comments.comment.RemoveAt(0);
+            comments.step.RemoveAt(0);
             comments.step.RemoveAt(0);
             string commS = JsonConvert.SerializeObject(comments);
             query = "UPDATE tests SET `name` = @name," +
@@ -845,6 +883,30 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog("{0} update test", UpdateTest.ToString());
 
+
+            query = "UPDATE kp SET `test` = @newTest, `steps` = @steps " +
+                "WHERE `test` = @test and `service` = @service";
+
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", mess.args[1]);
+            command.Parameters.AddWithValue("@newTest", "--");
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@steps", "0");
+            database.OpenConnection();
+            UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
+
+            query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
+                "WHERE `id` = @id and `service` = @service";
+
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", mess.args[1]);
+            command.Parameters.AddWithValue("@id", mess.args[4]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@steps", steps.ToString());
+            database.OpenConnection();
+            UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
             res.Add("OK");
         }
         public void UpdateTestChange(Message mess)
@@ -858,7 +920,7 @@ namespace DashBoardServer
             if (SelectResult.HasRows)
             {
                 while (SelectResult.Read())
-                    res.Add(SelectResult["name"].ToString(), SelectResult["author"].ToString(), SelectResult["statistic"].ToString());
+                    res.Add(SelectResult["name"].ToString(), SelectResult["kp"].ToString(), SelectResult["statistic"].ToString());
             }
             else
             {
@@ -1140,12 +1202,11 @@ namespace DashBoardServer
 
 
 
-        /*возвращает список где 1 запись имя а остальные комментарии*/
+        /*возвращает список где 1 запись имя, 2 количество шагов а остальные комментарии*/
         public Comments readTextOfTest(string service, string testId)
         {
             Comments comments = new Comments();
             string path = "";
-
             query = "SELECT * FROM dirs WHERE `test` = @test";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", testId);
@@ -1171,7 +1232,7 @@ namespace DashBoardServer
             string[] lines = text.Split('\n');
             string nameTest = "";
             Boolean i = false;
-            int index = 1;
+            int index = 0;
 
             foreach (string elem in lines)
             {
@@ -1186,9 +1247,10 @@ namespace DashBoardServer
                 {
                     if (i == true)
                     {
+                        index++;
                         comments.step.Add(index.ToString());
                         comments.comment.Add("Отсутствуют комментарии к шагу");
-                        index++;
+                        
                     }
                     i = true;
                 }
@@ -1201,9 +1263,10 @@ namespace DashBoardServer
                     el = el.Trim();
                     if (i == true)
                     {
+                        index++;
                         comments.step.Add(index.ToString());
                         comments.comment.Add(el);
-                        index++;
+                        
                     }
                     else
                     {
@@ -1220,6 +1283,8 @@ namespace DashBoardServer
             }
 
             comments.step.Insert(0, "");
+            comments.step.Insert(0, "");
+            comments.comment.Insert(0, index.ToString());
             comments.comment.Insert(0, nameTest);
             return comments;
         }
