@@ -22,7 +22,7 @@ Function test_start(a, b)
 	' Configure the Web application to use with this test
     qtApp.Test.Settings.Launchers("Web").Active = True
     qtApp.Test.Settings.Launchers("Web").SetLab "LocalBrowser"
-    qtApp.Test.Settings.Launchers("Web").Browser = "IE"
+    qtApp.Test.Settings.Launchers("Web").Browser = BrowserName
     qtApp.Test.Settings.Launchers("Web").Address = AddressHost
     qtApp.Test.Settings.Launchers("Web").CloseOnExit = True
     qtApp.Test.Settings.Launchers("Web").RuntimeParameterization = False

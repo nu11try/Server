@@ -12,39 +12,152 @@ using Newtonsoft.Json;
 
 namespace DashBoardServer
 {
+    public class PackStart
+    {
+
+        public PackStart()
+        {
+            TestsInPack = new Tests();
+            ResultTest = new Dictionary<string, string>();
+            ResultFolders = new List<string>();
+            FilesToStart = new List<string>();
+        }
+
+        public string Name = "";
+        public string Service = "";
+        public string IP = "";
+        public string Restart = "";
+        public string Browser = "";
+        public string Time = "";
+        public string Stend = "";
+        public string PathToTests = "";
+
+        public Tests TestsInPack;
+        public Dictionary<string, string> ResultTest;
+        public List<string> ResultFolders;
+        public List<string> FilesToStart;
+    }
+
     public class StartTests
     {
         private Database database = new Database();
-        FreeRAM freeRAM = new FreeRAM();
+        private FreeRAM freeRAM = new FreeRAM();
         private SQLiteCommand command;
-        private Logger logger = new Logger();
         private string query = "";
-        private string pathStend = "";
+
+        private Logger logger = new Logger();
         private FileSystem fs = new FileSystem();
-        private int TimePack = 0;
-        int TimeOut = 0;
+
         Process StartTest = new Process();
         TimerCallback tm;
         Timer timer;
-        Dictionary<string, string> resultTests = new Dictionary<string, string>();
-        bool restartTime = false;
 
-        string IPPC = "";
-        string NAMEPACK = "";
-        string service = "";
-        List<string> resultPath = new List<string>();
-        bool flagTimeout = false;
+        private Message Response = new Message();
+        private PackStart pack = new PackStart();
 
-        Dictionary<string, int> restartPack = new Dictionary<string, int>();
+        private bool FlagStarted = true;
+        private int SeconsdEnd;
 
-        Message response = new Message();
-        Message testsDirs = new Message();
-        Tests tests = new Tests();
+        public void Init(object RESPONSE)
+        {
+            string data = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
 
-        // очередь файлов
-        List<string> files = new List<string>();
-        Queue<string> packs = new Queue<string>();
+            Response = (Message)RESPONSE;
 
+            if (Response.args.Count > 0)
+            {
+                for (int i = 0; i < Response.args.Count; i += 9)
+                {
+                    pack.Name = Response.args[i + 1];
+                    pack.Service = Response.args[i];
+                    pack.Browser = Response.args[i + 6];
+                    pack.Restart = Response.args[i + 7];
+                    pack.Stend = Response.args[i + 8];
+                    pack.Time = Response.args[i + 4];
+                    pack.IP = Response.args[i + 3].Split(' ')[2];
+                    pack.PathToTests = JsonConvert.DeserializeObject<Message>(Response.args[i + 2]).args[0];
+                    pack.TestsInPack = JsonConvert.DeserializeObject<Tests>(Response.args[i + 5]);
+
+                    ConfigStartTest();
+                }
+                for (int i = 0; i < pack.TestsInPack.id.Count; i++)
+                {
+                    if (pack.TestsInPack.restart[i].Equals("default"))
+                        pack.TestsInPack.restart[i] = pack.Restart;
+                    if (pack.TestsInPack.time[i].Equals("default"))
+                        pack.TestsInPack.time[i] = pack.Time;
+                }
+            }
+            else return;
+
+            for (int i = 0; i < pack.ResultFolders.Count(); i++)
+            {
+                try
+                {
+                    string bufDependons = JsonConvert.DeserializeObject<Message>(pack.TestsInPack.dependon[i]).args[0];
+                    if (bufDependons.Equals("not"))
+                    {
+                        StartScript(pack.FilesToStart[i]);
+                        if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed"))
+                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                        else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                        {
+                            while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                            {
+                                StartScript(pack.FilesToStart[i]);
+                                pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                Console.WriteLine("1");
+                                Console.WriteLine(pack.ResultFolders[i]);
+                                Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                {
+                                    Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                    break;
+                                }
+
+                            }
+                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            if (pack.ResultTest[bufDependons].Equals("Failed"))
+                                pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependon_error"));
+                            else
+                            {
+                                StartScript(pack.FilesToStart[i]);
+                                if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed"))
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                {
+                                    while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                    {
+                                        StartScript(pack.FilesToStart[i]);
+                                        pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+
+                                        if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed")) break;
+
+                                    }
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        { Console.WriteLine(ex.Message); }
+                    }
+                    Console.WriteLine("Тест " + pack.FilesToStart[i] + " выполнен!");
+                    logger.WriteLog("[ЗАПУСК ТЕСТОВ] " + pack.FilesToStart[i], "START");
+                    FlagStarted = false;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            Finish();
+        }
         static public void ReplaceInFile(string filePath, string searchText, string replaceText)
         {
             StreamReader reader = new StreamReader(filePath);
@@ -55,190 +168,62 @@ namespace DashBoardServer
             writer.Write(content);
             writer.Close();
         }
-
         public void ConfigStartTest()
         {
-            for (int i = 0; i < tests.id.Count; i++)
+            for (int i = 0; i < pack.TestsInPack.id.Count; i++)
             {
                 try
                 {
                     File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/startTests.vbs",
-                        AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs", true);
+                        AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", true);
 
-                    query = "SELECT * FROM stends WHERE `service` = @service";
-                    command = new SQLiteCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@service", service);
-                    database.OpenConnection();
-                    SQLiteDataReader SelectResult = command.ExecuteReader();
-                    if (SelectResult.HasRows)
+                    ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                        "AddressHost", pack.Stend);
+
+                    if (pack.TestsInPack.browser[i].Equals("default"))
+                        ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                            "BrowserName", pack.Browser);
+                    else ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                            "BrowserName", pack.TestsInPack.browser[i]);
+
+                    using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", FileMode.Append))
                     {
-                        while (SelectResult.Read()) pathStend = SelectResult["url"].ToString();
-                    }
-                    SelectResult.Close();
-                    database.CloseConnection();
-
-                    ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs",
-                        "AddressHost", pathStend);
-
-                    using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs", FileMode.Append))
-                    {
-                        byte[] array = System.Text.Encoding.Default.GetBytes("Call test_start(\"" + "\\" + "\\172.31.197.220\\ATST\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
-                                + "\\" + tests.id[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
-                                + "\\" + tests.id[i] + "\\Res1\\" + "\")");
+                        byte[] array = System.Text.Encoding.Default.GetBytes("Call test_start(\"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                + "\\" + pack.TestsInPack.id[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                + "\\" + pack.TestsInPack.id[i] + "\\Res1\\" + "\")");
                         fstream.Write(array, 0, array.Length);
 
-                        // добавляем файл в очередь
-                        files.Add(AppDomain.CurrentDomain.BaseDirectory + "test/" + tests.id[i] + ".vbs");
-                        resultPath.Add("Z:\\" + testsDirs.args[i].Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + tests.id[i] + "\\Res1\\Report\\Results.xml");
+                        pack.FilesToStart.Add(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs");
+                        pack.ResultFolders.Add("Z:\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + pack.TestsInPack.id[i] + "\\Res1\\Report\\Results.xml");
                     }
-                    packs.Enqueue(NAMEPACK);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
                     logger.WriteLog("[ЗАПУСК ТЕСТОВ] " + ex.Message, "ERROR");
+
                 }
             }
         }
-
-        public void Start(object RESPONSE)
-        {
-            string data = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
-            Message dependons = new Message();
-            bool flagDep = true;
-
-            response = (Message)RESPONSE;
-            if (response.args.Count > 0)
-            {
-                service = response.args[0];
-                tests = JsonConvert.DeserializeObject<Tests>(response.args[5]);
-                testsDirs = JsonConvert.DeserializeObject<Message>(response.args[2]);
-                for (int i = 0; i < response.args.Count; i += 8)
-                {
-                    NAMEPACK = response.args[i + 1];
-                    IPPC = response.args[i + 3].Split(' ')[2];
-                    TimePack = Int32.Parse(response.args[i + 4]);
-                }
-                ConfigStartTest();
-                for (int i = 0; i < files.Count; i++)
-                {
-                    restartPack.Add(files[i], Int32.Parse(response.args[7]));
-                }
-            }
-            else return;
-
-            for (int i = 0; i < files.Count(); i++)
-            {
-                try
-                {
-                    CloseProc();
-                    dependons = JsonConvert.DeserializeObject<Message>(tests.dependon[i]);
-                    if (dependons.args[0] == "not")
-                    {
-                        StartScript(files[i], tests.id[i], resultPath[i], data);
-                        if (fs.TypeResultTest(resultPath[i]) == "Failed")
-                        {
-                            while (restartPack[files[i]] != 0)
-                            {
-                                CloseUFT();
-                                StartScript(files[i], tests.id[i], resultPath[i], data);
-                                if (fs.TypeResultTest(resultPath[i]) != "Failed")
-                                {
-                                    resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
-                                    break;
-                                }
-                                restartPack[files[i]]--;
-                            }
-                            if (restartPack[files[i]] == 0 && fs.TypeResultTest(resultPath[i]) == "Failed")
-                                resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
-                        }
-                        else
-                        {
-                            Console.WriteLine("2 = " + restartPack[files[i]]);
-                            resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
-                        }
-                    }
-                    else
-                    {
-                        try
-                        {
-                            foreach (var resDep in dependons.args)
-                            {
-                                if (resultTests[resDep].Equals("Failed"))
-                                {
-                                    flagDep = false;
-                                    break;
-                                }
-                            }
-                            if (!flagDep)
-                            {
-                                resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data, "dependen_error"));
-                                continue;
-                            }
-                            else
-                            {
-                                StartScript(files[i], tests.id[i], resultPath[i], data);
-                                if (fs.TypeResultTest(resultPath[i]) == "Failed")
-                                {
-                                    while (restartPack[files[i]] != 0)
-                                    {
-                                        CloseUFT();
-                                        StartScript(files[i], tests.id[i], resultPath[i], data);
-                                        if (fs.TypeResultTest(resultPath[i]) != "Failed")
-                                        {
-                                            resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
-                                            break;
-                                        }
-                                        restartPack[files[i]]--;
-                                    }
-                                    if (restartPack[files[i]] == 0 && fs.TypeResultTest(resultPath[i]) == "Failed")
-                                        resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
-                                }
-                                else
-                                {
-                                    resultTests.Add(tests.id[i], fs.ResultTest(service, tests.id[i], resultPath[i], data));
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        { Console.WriteLine(ex.Message); }
-                    }
-                    Console.WriteLine("Тест " + files[i] + " выполнен!");
-                    logger.WriteLog("[ЗАПУСК ТЕСТОВ] " + files[i], "START");
-                    try { TimeOut = 0; } catch { }
-                    restartTime = true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-            Finish(response, packs, tests, resultPath);
-        }
-
-        public void Finish(Message response, Queue<string> packs, Tests tests, List<string> resultPath)
+        public void Finish()
         {
             CloseProc();
-            TimePack = 0;
-            string bufName = "";
+            CloseUFT();
 
-            for (int i = 0; i < packs.Count; i++)
-            {
-                bufName = packs.Dequeue();
-                query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
-                command = new SQLiteCommand(query, database.connect);
-                command.Parameters.AddWithValue("@id", bufName);
-                database.OpenConnection();
-                var UpdateTest = command.ExecuteNonQuery();
-                database.CloseConnection();
-                logger.WriteLog("[СТАТУС НАБОРА ОБНОВЛЕН] " + bufName, "START");
-                Console.WriteLine("Статус набора " + bufName + " обновлен!");
-            }
-            for (int i = 0; i < tests.id.Count; i++)
+            query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", pack.Name);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+            logger.WriteLog("[СТАТУС НАБОРА ОБНОВЛЕН] " + pack.Name, "START");
+            Console.WriteLine("Статус набора " + pack.Name + " обновлен!");
+
+            for (int i = 0; i < pack.TestsInPack.id.Count(); i++)
             {
                 try
                 {
-                    DeleteResDirectories(tests.id[i], resultPath[i]);
+                    DeleteResDirectories(pack.TestsInPack.id[i], pack.ResultFolders[i]);
                 }
                 catch
                 {
@@ -247,42 +232,43 @@ namespace DashBoardServer
             }
             freeRAM.Free();
         }
-        public void StartScript(string bufName, string test = "", string resultPath = "", string data = "")
+        public void StartScript(string file)
         {
-            StartTest.StartInfo.FileName = bufName;
+            CloseProc();
+            CloseUFT();
+
+            SeconsdEnd = 0;
+
+            StartTest.StartInfo.FileName = file;
             StartTest.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             StartTest.StartInfo.UseShellExecute = true;
             StartTest.StartInfo.LoadUserProfile = true;
             StartTest.Start();
 
             Console.WriteLine("Ждем поток");
-            tm = new TimerCallback(CloseUFT);
-            timer = new Timer(tm, TimeOut, 1000, 1000);
-            
+            tm = new TimerCallback(TimeOut);
+            timer = new Timer(tm, file, 1000, 1000);
+
             StartTest.WaitForExit();
-            if (flagTimeout)
-            {
-                resultTests.Add(test, fs.ResultTest(service, test, resultPath, data, "time_out"));
-            }
         }
-        public void CloseUFT(object timeout)
-        { 
-            Console.WriteLine("Секунд прошло = " + TimeOut);
-            if (TimeOut >= TimePack && !restartTime)
+        public void TimeOut(object fileStarted)
+        {
+            Console.WriteLine("Секунд прошло = " + SeconsdEnd);
+            if (SeconsdEnd >= Int32.Parse(pack.TestsInPack.time[pack.FilesToStart.IndexOf(fileStarted.ToString())]) && FlagStarted)
             {
                 CloseProc();
                 try { timer.Dispose(); } catch { }
                 try { StartTest.Kill(); } catch { }
                 try { StartTest.Close(); } catch { }
-                try { TimeOut = 0; } catch { }
-                flagTimeout = true;
+                try { SeconsdEnd = 0; } catch { }
+                FlagStarted = false;
             }
-            else if (restartTime)
+            else if (!FlagStarted)
             {
-                try { TimeOut = 0; } catch { }
-                restartTime = false;
+                try { SeconsdEnd = 0; } catch { }
+                FlagStarted = false;
             }
-            else TimeOut += 1;
+            else SeconsdEnd++;
         }
         public void CloseUFT()
         {
@@ -290,7 +276,7 @@ namespace DashBoardServer
             try { timer.Dispose(); } catch { }
             try { StartTest.Kill(); } catch { }
             try { StartTest.Close(); } catch { }
-            try { TimeOut = 0; } catch { }
+            try { SeconsdEnd = 0; } catch { }
         }
         public void CloseProc()
         {

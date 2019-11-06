@@ -1189,7 +1189,20 @@ namespace DashBoardServer
                     database.CloseConnection();
                     logger.WriteLog("Обновлены статусы наборов! Произведен запуск наборов " + paramArray[i]);*/
                 }
-                Thread startPack = new Thread(new ParameterizedThreadStart(startTests.Start));
+
+                query = "SELECT * FROM stends WHERE `service` = @service";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                database.OpenConnection();
+                SelectResult = command.ExecuteReader();
+                if (SelectResult.HasRows)
+                {
+                    while (SelectResult.Read()) request.Add(SelectResult["url"].ToString());
+                }
+                SelectResult.Close();
+                database.CloseConnection();
+
+                Thread startPack = new Thread(new ParameterizedThreadStart(startTests.Init));
                 startPack.Start(request);
                 res.Add("OK");
             }
