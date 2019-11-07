@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
@@ -11,6 +12,17 @@ using System.Xml.Linq;
 
 namespace DashBoardServer
 {
+    public class Step
+    {
+        public string name { get; set; }
+        public List<string> innerSteps { get; set; }
+        public string time { get; set; }
+    }
+    public class Steps
+    {
+        public List<string> name { get; set; }
+        public List<List<string>> innerSteps { get; set; }
+    }
     public class FileSystem
     {
         private Database database = new Database();
@@ -30,10 +42,16 @@ namespace DashBoardServer
             foreach (XmlNode xNode in xRoot)
             {
                 foreach (XmlNode children in xNode.ChildNodes)
-                {
-                    if (children.Name == "NodeArgs")
+                {         
+                    if (children.Name == "Data")
                     {
-                        result = children.Attributes.GetNamedItem("status").Value;
+                        foreach (XmlNode dataChildren in children.ChildNodes)
+                        {
+                            if (dataChildren.Name == "Result")
+                            {
+                                result = dataChildren.InnerText;
+                            }
+                        }
                     }
                 }
             }
@@ -47,121 +65,105 @@ namespace DashBoardServer
             // они идут через один (ШАГ ВРЕМЯ ШАГ...)
             // бывают момент, когда времени 2
             // 2-ое время - это потерянное время
-            List<List<string>> resultTest = new List<List<string>>();
-            List<string> bufResult = new List<string>();
-            List<string> steps = new List<string>();
-            List<string> eTime = new List<string>();
-            List<string> lTime = new List<string>();
-
+            List<Step> listSteps = new List<Step>();
+            string duration = "";
+            string result = "";
+            XmlDocument xDoc = new XmlDocument();
             xDoc.Load(resultPath);
             XmlElement xRoot = xDoc.DocumentElement;
+            int flag = 0;
+            Step step = new Step();
+            step.innerSteps = new List<string>();
             foreach (XmlNode xNode in xRoot)
             {
                 foreach (XmlNode children in xNode.ChildNodes)
                 {
-                    if (children.Name == "NodeArgs")
+                    if (children.Name == "ReportNode")
                     {
-                        bufResult.Add(children.Attributes.GetNamedItem("status").Value);
-                        resultTest.Add(bufResult);
-                        bufResult = new List<string>();
-                    }
-                    if (children.Name == "DIter")
-                    {
-                        foreach (XmlNode childrenCh in children.ChildNodes)
+                        foreach (XmlNode reports in children.ChildNodes)
                         {
-                            if (childrenCh.Name == "Action")
+                            foreach (XmlNode steps in reports.ChildNodes)
                             {
-                                foreach (XmlNode buf in childrenCh.ChildNodes)
+                                if (steps.Name != "Data")
                                 {
-                                    if (buf.Name == "Step")
+                                    foreach (XmlNode datas in steps.ChildNodes)
                                     {
-                                        foreach (XmlNode buf1 in buf.ChildNodes)
+                                        foreach (XmlNode dataCh in datas.ChildNodes)
                                         {
-                                            if (buf1.Name == "Obj")
+                                            if (dataCh.Name == "Name" && flag == 0 && dataCh.InnerText.StartsWith("Step"))
                                             {
-                                                if (buf1.InnerText.IndexOf("Step") != -1)
+                                                flag = 1;
+                                                step = new Step();
+                                                step.innerSteps = new List<string>();
+                                                step.name = dataCh.InnerText;
+
+                                            }
+                                            else
+                                            if (dataCh.Name == "Name" && flag == 1 && dataCh.InnerText.StartsWith("Step"))
+                                            {
+                                                listSteps.Add(step);
+                                                flag = 0;
+
+                                            }
+                                            if (dataCh.Name == "Name" && !dataCh.InnerText.StartsWith("Step") && flag == 1)
+                                            {
+                                                step.innerSteps.Add(dataCh.InnerText);
+                                                if (dataCh.InnerText.Contains("Stop Run"))
                                                 {
-                                                    if (bufResult.IndexOf(buf1.InnerText) == -1) bufResult.Add(buf1.InnerText);
+                                                    flag = 0;
+                                                    step.time = dataCh.InnerText;
+                                                    listSteps.Add(step);
                                                 }
                                             }
-                                            if (buf1.Name == "Details")
+                                            if (dataCh.Name == "Description" && dataCh.InnerText.Contains("Total Duration:") && flag == 1)
                                             {
-                                                if (buf1.InnerText.IndexOf("завершена") != -1 || buf1.InnerText.IndexOf("ended") != -1)
-                                                {
-                                                    MatchCollection matches = new Regex(@"(\d,)+[0-9]+\S").Matches(buf1.InnerText);
-                                                    foreach (Match mat in matches) bufResult.Add(mat.Value);
-                                                }
+                                                string dur = dataCh.InnerText.Substring(dataCh.InnerText.LastIndexOf("Total Duration: "));
+                                                step.time = dur.Split(' ')[2];
                                             }
                                         }
                                     }
                                 }
-                                resultTest.Add(bufResult);
-                                bufResult = new List<string>();
+                            }
+                        }
+                    }
+                    if (children.Name == "Data")
+                    {
+                        foreach (XmlNode dataChildren in children.ChildNodes)
+                        {
+                            if (dataChildren.Name == "Duration")
+                            {
+                                duration = dataChildren.InnerText;
+                            }
+                            if (dataChildren.Name == "Result")
+                            {
+                                result = dataChildren.InnerText;
                             }
                         }
                     }
                 }
             }
-
-            int timeLoseNow = 1;
-            for (int i = 0; i < resultTest.Count - 1; i++)
+            Steps steps1 = new Steps();
+            steps1.innerSteps = new List<List<string>>();
+            steps1.name = new List<string>();
+            Message mess = new Message();
+            for (int i = 0; i < listSteps.Count; i++)
             {
-                for (int j = 0; j < resultTest[i].Count; j++)
-                {
-                    if (resultTest[i][j].IndexOf("Step") != -1 && timeLoseNow == 1)
-                    {
-                        steps.Add(resultTest[i][j]);
-                        timeLoseNow++;
-                        Console.WriteLine(resultTest[i][j] + " ");
-                    }
-                    if (resultTest[i][j].IndexOf("Step") != -1 && timeLoseNow == 3)
-                    {
-                        steps.Add(resultTest[i][j]);
-                        lTime.Add("0");
-                        timeLoseNow = 2;
-                        Console.WriteLine(0 + "\n");
-                        Console.WriteLine(resultTest[i][j] + " ");
-                    }
-                    if (resultTest[i][j].IndexOf("Step") == -1 && timeLoseNow == 2)
-                    {
-                        eTime.Add(resultTest[i][j]);
-                        timeLoseNow++;
-                        Console.WriteLine(resultTest[i][j] + " ");
-                    }
-                    else if (resultTest[i][j].IndexOf("Step") == -1 && timeLoseNow == 3)
-                    {
-                        lTime.Add(resultTest[i][j]);
-                        timeLoseNow = 1;
-                        Console.WriteLine(resultTest[i][j] + "\n");
-                    }
-                }
+                steps1.name.Add(listSteps[i].name);
+                steps1.innerSteps.Add(listSteps[i].innerSteps);
+                mess.Add(listSteps[i].time);
             }
-            if (steps.Count > eTime.Count)
-            {
-                eTime.Add("0");
-                lTime.Add("0");
-            }
-            else if (eTime.Count > lTime.Count) lTime.Add("0");
-
-            string bufStr = "";
-            string bufStr1 = "";
-            string bufStr2 = "";
-            double bufInt = 0;
+           
             query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
-            command = new SQLiteCommand(query, database.connect);
-            for (int i = 0; i < steps.Count; i++) bufStr += steps[i] + "\n";
-            for (int i = 0; i < eTime.Count; i++) bufStr1 += eTime[i] + "\n";
-            for (int i = 0; i < eTime.Count; i++) bufInt += Double.Parse(eTime[i]);
-            for (int i = 0; i < lTime.Count; i++) bufStr2 += lTime[i] + "\n";
+            command = new SQLiteCommand(query, database.connect);        
             command.Parameters.AddWithValue("@id", nameTest);
             command.Parameters.AddWithValue("@test", nameTest);
             command.Parameters.AddWithValue("@service", service);
-            command.Parameters.AddWithValue("@result", resultTest[resultTest.Count - 1][0]);
-            command.Parameters.AddWithValue("@time_step", bufStr1);
-            command.Parameters.AddWithValue("@time_end", bufInt.ToString());
-            command.Parameters.AddWithValue("@time_lose", bufStr2);
-            command.Parameters.AddWithValue("@steps", bufStr);
+            command.Parameters.AddWithValue("@result", result);
+            command.Parameters.AddWithValue("@time_step", JsonConvert.SerializeObject(mess));
+            command.Parameters.AddWithValue("@time_end", duration);
+            command.Parameters.AddWithValue("@time_lose", 0);
+            command.Parameters.AddWithValue("@steps", JsonConvert.SerializeObject(steps1));
             command.Parameters.AddWithValue("@date", data);
             command.Parameters.AddWithValue("@version", "TEST");
             database.OpenConnection();
@@ -169,7 +171,7 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog("Добавлена статистика для теста " + nameTest);
 
-            return resultTest[resultTest.Count - 1][0];
+            return result;
         }
         public string ResultTest(string service, string nameTest, string resultPath, string data, string options)
         {
@@ -194,12 +196,14 @@ namespace DashBoardServer
                 database.CloseConnection();
                 logger.WriteLog("Добавлена статистика для теста " + nameTest);
             }
+
+           
             else if (options == "time_out")
             {
                 query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
                 command = new SQLiteCommand(query, database.connect);
-
+                
                 command.Parameters.AddWithValue("@id", nameTest);
                 command.Parameters.AddWithValue("@test", nameTest);
                 command.Parameters.AddWithValue("@service", service);

@@ -370,7 +370,7 @@ namespace DashBoardServer
                 {
                     while (SelectResult.Read())
                     {
-                        if (!res.args.Contains(testsPack.id[i])) res.Add(testsPack.id[i], SelectResult["name"].ToString());
+                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.browser[i], testsPack.dependon[i]);
                     }
                 }
                 else

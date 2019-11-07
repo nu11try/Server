@@ -14,7 +14,6 @@ namespace DashBoardServer
 {
     public class PackStart
     {
-
         public PackStart()
         {
             TestsInPack = new Tests();
@@ -102,20 +101,21 @@ namespace DashBoardServer
                             pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
                         else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
                         {
+                            Console.WriteLine("1");
                             while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
                             {
                                 StartScript(pack.FilesToStart[i]);
                                 pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-                                Console.WriteLine("1");
-                                Console.WriteLine(pack.ResultFolders[i]);
-                                Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                Console.WriteLine("2");
                                 if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
                                 {
+                                    Console.WriteLine("3");
                                     Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
                                     break;
                                 }
 
                             }
+                            Console.WriteLine("4");
                             pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
                         }
                     }
@@ -123,6 +123,7 @@ namespace DashBoardServer
                     {
                         try
                         {
+                            Console.WriteLine("5");
                             if (pack.ResultTest[bufDependons].Equals("Failed"))
                                 pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependon_error"));
                             else
@@ -194,7 +195,7 @@ namespace DashBoardServer
                         fstream.Write(array, 0, array.Length);
 
                         pack.FilesToStart.Add(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs");
-                        pack.ResultFolders.Add("Z:\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + pack.TestsInPack.id[i] + "\\Res1\\Report\\Results.xml");
+                        pack.ResultFolders.Add("Z:\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + pack.TestsInPack.id[i] + "\\Res1\\Report\\run_results.xml");
                     }
                 }
                 catch (Exception ex)
