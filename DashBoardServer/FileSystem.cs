@@ -115,7 +115,7 @@ namespace DashBoardServer
                                                     listSteps.Add(step);
                                                 }
                                             }
-                                            if (dataCh.Name == "Description" && dataCh.InnerText.Contains("Total Duration:") && flag == 1)
+                                            if (dataCh.Name == "Description" && dataCh.InnerText.Contains("Total Duration:"))
                                             {
                                                 string dur = dataCh.InnerText.Substring(dataCh.InnerText.LastIndexOf("Total Duration: "));
                                                 step.time = dur.Split(' ')[2];

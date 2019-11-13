@@ -400,7 +400,7 @@ namespace DashBoardServer
                 }
                 else
                 {
-                    res.Add("no_tests");
+                    res.Add("Нет данных", "Нет данных");
                 }
                 SelectResult.Close();
                 database.CloseConnection();
@@ -663,10 +663,10 @@ namespace DashBoardServer
         /// <returns></returns>
         public void GetAutostartInfo(Message mess)
         {
-            query = "SELECT * FROM autostart WHERE `service` = @service AND `id` = @id_auto";
+            query = "SELECT * FROM autostart WHERE `service` = @service AND `id` = @id";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@id_auto", mess.args[1]);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
@@ -889,11 +889,11 @@ namespace DashBoardServer
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@id_auto", mess.args[1]);
             command.Parameters.AddWithValue("@Name", mess.args[2]);
-            command.Parameters.AddWithValue("@Days", mess.args[3]);
+            command.Parameters.AddWithValue("@Days", mess.args[4]);
             command.Parameters.AddWithValue("@Service", mess.args[0]);
-            command.Parameters.AddWithValue("@Time", mess.args[5] + ":" + mess.args[6]);
-            command.Parameters.AddWithValue("@Packs", mess.args[4]);
-            command.Parameters.AddWithValue("@Type", mess.args[2]);
+            command.Parameters.AddWithValue("@Time", mess.args[6] + ":" + mess.args[7]);
+            command.Parameters.AddWithValue("@Packs", mess.args[5]);
+            command.Parameters.AddWithValue("@Type", mess.args[3]);
             database.OpenConnection();
             var InsertTesult = command.ExecuteNonQuery();
             database.CloseConnection();
@@ -1115,7 +1115,7 @@ namespace DashBoardServer
             Message request = new Message();
             Message dirs = new Message();
             Tests tests = new Tests();
-
+            List<string> packs = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
             command = new SQLiteCommand(query, database.connect);
             for (int i = 1; i < mess.args.Count; i++)
@@ -1140,7 +1140,6 @@ namespace DashBoardServer
                 SelectResult.Close();
                 database.CloseConnection();
             }
-            /*выше все хорошо*/
             if (mess.args.Count > 1)
             {
                 for (int i = 1; i < mess.args.Count; i++)
@@ -1152,10 +1151,12 @@ namespace DashBoardServer
                     command.Parameters.AddWithValue("@id_pack", mess.args[i]);
                     database.OpenConnection();
                     SelectResult = command.ExecuteReader();
+                   
                     if (SelectResult.HasRows)
                     {
                         while (SelectResult.Read())
                         {
+                            packs.Add(SelectResult["id"].ToString());
                             tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
                             for (int j = 0; j < tests.id.Count; j++)
                             {
@@ -1176,35 +1177,36 @@ namespace DashBoardServer
                                 //database1.CloseConnection();
                             }
                             request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString(), SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString());
+                            query = "SELECT * FROM stends WHERE `service` = @service";
+                            command = new SQLiteCommand(query, database.connect);
+                            command.Parameters.AddWithValue("@service", mess.args[0]);
+                            database.OpenConnection();
+                            SelectResult1 = command.ExecuteReader();
+                            if (SelectResult1.HasRows)
+                            {
+                                while (SelectResult1.Read()) request.Add(SelectResult1["url"].ToString());
+                            }
+                            SelectResult1.Close();
                         }
                     }
                     SelectResult.Close();
                     database.CloseConnection();
+                }
 
-                    /*query = "UPDATE packs SET `Status` = 'start' WHERE `id_pack` = @id";
+                packs.ForEach(id =>
+                {
+                    query = "UPDATE packs SET `status` = 'start' WHERE `id` = @id";
                     command = new SQLiteCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@id", paramArray[i]);
+                    command.Parameters.AddWithValue("@id", id);
                     database.OpenConnection();
                     var UpdateTest = command.ExecuteNonQuery();
                     database.CloseConnection();
-                    logger.WriteLog("Обновлены статусы наборов! Произведен запуск наборов " + paramArray[i]);*/
-                }
-
-                query = "SELECT * FROM stends WHERE `service` = @service";
-                command = new SQLiteCommand(query, database.connect);
-                command.Parameters.AddWithValue("@service", mess.args[0]);
-                database.OpenConnection();
-                SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
-                {
-                    while (SelectResult.Read()) request.Add(SelectResult["url"].ToString());
-                }
-                SelectResult.Close();
-                database.CloseConnection();
-
+                    logger.WriteLog("Обновлены статусы наборов! Произведен запуск набора " + id);
+                });
                 Thread startPack = new Thread(new ParameterizedThreadStart(startTests.Init));
                 startPack.Start(request);
                 res.Add("OK");
+               
             }
             else res.Add("ERROR");
         }
@@ -1247,6 +1249,25 @@ namespace DashBoardServer
             logger.WriteLog("{0} update test", UpdateTest.ToString());
 
             res.Add("ok");
+        }
+
+        public void UpdateAutostart(Message mess)
+        {
+            query = "UPDATE autostart SET `name` = @name, `days` = @days, `time` = @time, `packs` = @packs, `type` = @type WHERE `id` = @id AND `service` = @service";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@name", mess.args[2]);
+            command.Parameters.AddWithValue("@days", mess.args[4]);
+            command.Parameters.AddWithValue("@time", mess.args[6] + ":" + mess.args[7]);
+            command.Parameters.AddWithValue("@packs", mess.args[5]);
+            command.Parameters.AddWithValue("@type", mess.args[3]);
+            database.OpenConnection();
+            var InsertTesult = command.ExecuteNonQuery();
+            database.CloseConnection();
+            logger.WriteLog(InsertTesult.ToString() + " update auto");
+
+            res.Add("OK");
         }
         public void ChangePositionList(Message mess)
         {

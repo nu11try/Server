@@ -38,9 +38,9 @@ namespace DashBoardServer
 
                 try
                 {
-                    /*Autostart autostart = new Autostart();
+                    Autostart autostart = new Autostart();
                     Thread autoStartThread = new Thread(new ParameterizedThreadStart(autostart.Init));
-                    autoStartThread.Start();*/
+                    autoStartThread.Start();
                 }
                 catch (Exception ex)
                 {
@@ -52,7 +52,7 @@ namespace DashBoardServer
                     TcpClient client = listener.AcceptTcpClient();                    
                     ClientObject clientObject = new ClientObject(client);
 
-                    // создаем новый поток для обслуживания нового клиента
+                    //создаем новый поток для обслуживания нового клиента
                     Thread clientThread = new Thread(new ThreadStart(clientObject.Process));
                     clientThread.Start();
                 }

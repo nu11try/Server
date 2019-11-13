@@ -37,6 +37,8 @@ namespace DashBoardServer
         public List<string> FilesToStart;
     }
 
+
+
     public class StartTests
     {
         private Database database = new Database();
@@ -52,9 +54,10 @@ namespace DashBoardServer
         Timer timer;
 
         private Message Response = new Message();
-        private PackStart pack = new PackStart();
+      // private PackStart pack = new PackStart();
+        private List<PackStart> packs = new List < PackStart > ();
 
-        private bool FlagStarted = true;
+        private bool FlagStarted;
         private int SeconsdEnd;
 
         public void Init(object RESPONSE)
@@ -67,6 +70,7 @@ namespace DashBoardServer
             {
                 for (int i = 0; i < Response.args.Count; i += 9)
                 {
+                    PackStart pack = new PackStart();
                     pack.Name = Response.args[i + 1];
                     pack.Service = Response.args[i];
                     pack.Browser = Response.args[i + 6];
@@ -77,87 +81,176 @@ namespace DashBoardServer
                     pack.PathToTests = JsonConvert.DeserializeObject<Message>(Response.args[i + 2]).args[0];
                     pack.TestsInPack = JsonConvert.DeserializeObject<Tests>(Response.args[i + 5]);
 
-                    ConfigStartTest();
+                    ConfigStartTest(pack);
+                    packs.Add(pack);
                 }
-                for (int i = 0; i < pack.TestsInPack.id.Count; i++)
+                packs.ForEach(pack =>
                 {
-                    if (pack.TestsInPack.restart[i].Equals("default"))
-                        pack.TestsInPack.restart[i] = pack.Restart;
-                    if (pack.TestsInPack.time[i].Equals("default"))
-                        pack.TestsInPack.time[i] = pack.Time;
-                }
+                    for (int i = 0; i < pack.TestsInPack.id.Count; i++)
+                    {
+                        if (pack.TestsInPack.restart[i].Equals("default"))
+                            pack.TestsInPack.restart[i] = pack.Restart;
+                        if (pack.TestsInPack.time[i].Equals("default"))
+                            pack.TestsInPack.time[i] = pack.Time;
+                    }
+                });
             }
             else return;
-
-            for (int i = 0; i < pack.ResultFolders.Count(); i++)
+            packs.ForEach(pack =>
             {
-                try
+                for (int i = 0; i < pack.ResultFolders.Count(); i++)
                 {
-                    string bufDependons = JsonConvert.DeserializeObject<Message>(pack.TestsInPack.dependon[i]).args[0];
-                    if (bufDependons.Equals("not"))
+                    FlagStarted = true;
+                    try
                     {
-                        StartScript(pack.FilesToStart[i]);
-                        if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed"))
-                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
-                        else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                        string bufDependons = JsonConvert.DeserializeObject<Message>(pack.TestsInPack.dependon[i]).args[0];
+                        if (bufDependons.Equals("not"))
                         {
-                            Console.WriteLine("1");
-                            while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                            StartScript(pack.FilesToStart[i], pack);
+                            try
                             {
-                                StartScript(pack.FilesToStart[i]);
-                                pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-                                Console.WriteLine("2");
-                                if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
-                                {
-                                    Console.WriteLine("3");
-                                    Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
-                                    break;
-                                }
-
-                            }
-                            Console.WriteLine("4");
-                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
-                        }
-                    }
-                    else
-                    {
-                        try
-                        {
-                            Console.WriteLine("5");
-                            if (pack.ResultTest[bufDependons].Equals("Failed"))
-                                pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependon_error"));
-                            else
-                            {
-                                StartScript(pack.FilesToStart[i]);
-                                if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed"))
+                                if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
                                     pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
                                 else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
                                 {
                                     while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
                                     {
-                                        StartScript(pack.FilesToStart[i]);
+                                        StartScript(pack.FilesToStart[i], pack);
                                         pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-
-                                        if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed")) break;
-
+                                        try
+                                        {
+                                            if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                            {
+                                                Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                                break;
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            Console.WriteLine("Тайм айт1");
+                                            continue;
+                                        }
                                     }
                                     pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
                                 }
                             }
+                            catch
+                            {
+                                while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                {
+                                    FlagStarted = true;
+                                    StartScript(pack.FilesToStart[i], pack);
+                                    pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                    try
+                                    {
+                                        if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                        {
+                                            Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                            break;
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        continue;
+                                    }
+                                }
+                                try
+                                {
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                }
+                                catch
+                                {
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out"));
+                                }
+                            }
                         }
-                        catch (Exception ex)
-                        { Console.WriteLine(ex.Message); }
+                        else
+                        {
+                            try
+                            {
+                                try
+                                {
+                                    if (pack.ResultTest[bufDependons].Equals("Failed"))
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependen_error"));
+                                    else
+                                    {
+                                        StartScript(pack.FilesToStart[i], pack);
+                                        if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                        else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                        {
+                                            while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                            {
+                                                StartScript(pack.FilesToStart[i], pack);
+                                                pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+
+                                                if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed")) break;
+
+                                            }
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                    {
+                                        FlagStarted = true;
+                                        StartScript(pack.FilesToStart[i], pack);
+                                        pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                        try
+                                        {
+                                            if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                            {
+                                                Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                                break;
+                                            }
+                                        }
+                                        catch
+                                        {
+                                            continue;
+                                        }
+                                    }
+                                    try
+                                    {
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                    }
+                                    catch
+                                    {
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out"));
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(ex.Message);
+                            }
+                            Console.WriteLine("Тест " + pack.FilesToStart[i] + " выполнен!");
+                            logger.WriteLog("[ЗАПУСК ТЕСТОВ] " + pack.FilesToStart[i], "START");
+                            FlagStarted = true;
+                        }
                     }
-                    Console.WriteLine("Тест " + pack.FilesToStart[i] + " выполнен!");
-                    logger.WriteLog("[ЗАПУСК ТЕСТОВ] " + pack.FilesToStart[i], "START");
-                    FlagStarted = false;
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            }
-            Finish();
+                Finish(pack);
+            });
+
+            query = "DELETE FROM autostart WHERE `service`= @service AND status = 'start' AND TYPE = 'one'";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", packs[0].Service);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+
+            query = "UPDATE autostart SET `status` = 'no_start' WHERE `status` = 'start' and `service`= @service";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", packs[0].Service);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
         }
         static public void ReplaceInFile(string filePath, string searchText, string replaceText)
         {
@@ -169,7 +262,7 @@ namespace DashBoardServer
             writer.Write(content);
             writer.Close();
         }
-        public void ConfigStartTest()
+        public void ConfigStartTest(PackStart pack)
         {
             for (int i = 0; i < pack.TestsInPack.id.Count; i++)
             {
@@ -181,11 +274,11 @@ namespace DashBoardServer
                     ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
                         "AddressHost", pack.Stend);
 
-                    if (pack.TestsInPack.browser[i].Equals("default"))
+                    if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
                         ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
-                            "BrowserName", pack.Browser);
+                            "BrowserName", pack.Browser.ToUpper());
                     else ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
-                            "BrowserName", pack.TestsInPack.browser[i]);
+                            "BrowserName", pack.TestsInPack.browser[i].ToUpper());
 
                     using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", FileMode.Append))
                     {
@@ -206,7 +299,7 @@ namespace DashBoardServer
                 }
             }
         }
-        public void Finish()
+        public void Finish(PackStart pack)
         {
             CloseProc();
             CloseUFT();
@@ -219,21 +312,9 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog("[СТАТУС НАБОРА ОБНОВЛЕН] " + pack.Name, "START");
             Console.WriteLine("Статус набора " + pack.Name + " обновлен!");
-
-            for (int i = 0; i < pack.TestsInPack.id.Count(); i++)
-            {
-                try
-                {
-                    DeleteResDirectories(pack.TestsInPack.id[i], pack.ResultFolders[i]);
-                }
-                catch
-                {
-                    Console.WriteLine("Не найдена папка для удаления результата");
-                }
-            }
             freeRAM.Free();
         }
-        public void StartScript(string file)
+        public void StartScript(string file, PackStart pack)
         {
             CloseProc();
             CloseUFT();
@@ -248,12 +329,23 @@ namespace DashBoardServer
 
             Console.WriteLine("Ждем поток");
             tm = new TimerCallback(TimeOut);
-            timer = new Timer(tm, file, 1000, 1000);
+            Options options = new Options();
+            options.file = file;
+            options.pack = pack;
+            timer = new Timer(tm, options, 1000, 1000);
 
             StartTest.WaitForExit();
         }
-        public void TimeOut(object fileStarted)
+        public class Options
         {
+            public string file = "";
+            public PackStart pack;
+        }
+        public void TimeOut(object obj)
+        {
+            Options options = (Options)obj;
+            string fileStarted = options.file;
+            PackStart pack = options.pack;
             Console.WriteLine("Секунд прошло = " + SeconsdEnd);
             if (SeconsdEnd >= Int32.Parse(pack.TestsInPack.time[pack.FilesToStart.IndexOf(fileStarted.ToString())]) && FlagStarted)
             {
