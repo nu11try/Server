@@ -57,7 +57,7 @@ namespace DashBoardServer
             }
             return result;
         }
-        public string ResultTest(string service, string nameTest, string resultPath, string data)
+        public string ResultTest(string service, string nameTest, string resultPath, string data, string version)
         {
             // в конце - статус теста
             // каждый элемент - результат выполнения теста
@@ -165,7 +165,7 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@time_lose", 0);
             command.Parameters.AddWithValue("@steps", JsonConvert.SerializeObject(steps1));
             command.Parameters.AddWithValue("@date", data);
-            command.Parameters.AddWithValue("@version", "TEST");
+            command.Parameters.AddWithValue("@version", version);
             database.OpenConnection();
             var InsertTesult = command.ExecuteNonQuery();
             database.CloseConnection();
@@ -173,7 +173,7 @@ namespace DashBoardServer
 
             return result;
         }
-        public string ResultTest(string service, string nameTest, string resultPath, string data, string options)
+        public string ResultTest(string service, string nameTest, string resultPath, string data, string options, string version)
         {
             if (options == "dependen_error")
             {
@@ -190,7 +190,7 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@time_lose", "DEPENDEN ERROR");
                 command.Parameters.AddWithValue("@steps", "DEPENDEN ERROR");
                 command.Parameters.AddWithValue("@date", data);
-                command.Parameters.AddWithValue("@version", "TEST");
+                command.Parameters.AddWithValue("@version", version);
                 database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
                 database.CloseConnection();
@@ -213,7 +213,7 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@time_lose", "TIMEOUT");
                 command.Parameters.AddWithValue("@steps", "TIMEOUT");
                 command.Parameters.AddWithValue("@date", data);
-                command.Parameters.AddWithValue("@version", "TEST");
+                command.Parameters.AddWithValue("@version", version);
                 database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
                 database.CloseConnection();

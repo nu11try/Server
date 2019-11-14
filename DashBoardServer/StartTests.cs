@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Net;
 using System.IO;
 using System.Data.SQLite;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Threading;
 using Newtonsoft.Json;
@@ -20,6 +19,7 @@ namespace DashBoardServer
             ResultTest = new Dictionary<string, string>();
             ResultFolders = new List<string>();
             FilesToStart = new List<string>();
+            VersionStends = new List<string>();
         }
 
         public string Name = "";
@@ -29,18 +29,25 @@ namespace DashBoardServer
         public string Browser = "";
         public string Time = "";
         public string Stend = "";
-        public string PathToTests = "";
+        public string PathToTests = "";        
 
         public Tests TestsInPack;
         public Dictionary<string, string> ResultTest;
         public List<string> ResultFolders;
         public List<string> FilesToStart;
+        public List<string> VersionStends;
     }
-
-
+    public class Options
+    {
+        public string file = "";
+        public PackStart pack;
+    }
 
     public class StartTests
     {
+        public Regex myReg;
+        public Match match;
+
         private Database database = new Database();
         private FreeRAM freeRAM = new FreeRAM();
         private SQLiteCommand command;
@@ -54,7 +61,7 @@ namespace DashBoardServer
         Timer timer;
 
         private Message Response = new Message();
-      // private PackStart pack = new PackStart();
+        // private PackStart pack = new PackStart();
         private List<PackStart> packs = new List < PackStart > ();
 
         private bool FlagStarted;
@@ -110,7 +117,7 @@ namespace DashBoardServer
                             try
                             {
                                 if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
                                 else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
                                 {
                                     while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
@@ -131,7 +138,7 @@ namespace DashBoardServer
                                             continue;
                                         }
                                     }
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
                                 }
                             }
                             catch
@@ -156,11 +163,11 @@ namespace DashBoardServer
                                 }
                                 try
                                 {
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
                                 }
                                 catch
                                 {
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out"));
+                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out", pack.VersionStends[i]));
                                 }
                             }
                         }
@@ -171,12 +178,12 @@ namespace DashBoardServer
                                 try
                                 {
                                     if (pack.ResultTest[bufDependons].Equals("Failed"))
-                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependen_error"));
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependen_error", pack.VersionStends[i]));
                                     else
                                     {
                                         StartScript(pack.FilesToStart[i], pack);
                                         if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
-                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
                                         else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
                                         {
                                             while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
@@ -187,7 +194,7 @@ namespace DashBoardServer
                                                 if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed")) break;
 
                                             }
-                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
                                         }
                                     }
                                 }
@@ -213,11 +220,11 @@ namespace DashBoardServer
                                     }
                                     try
                                     {
-                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data));
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
                                     }
                                     catch
                                     {
-                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out"));
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out", pack.VersionStends[i]));
                                     }
                                 }
                             }
@@ -273,6 +280,9 @@ namespace DashBoardServer
 
                     ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
                         "AddressHost", pack.Stend);
+
+                    myReg = new Regex(@"http:\/\/.*\/");                    
+                    pack.VersionStends.Add(GetVersionStend(myReg.Match(pack.Stend).Value));
 
                     if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
                         ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
@@ -335,12 +345,7 @@ namespace DashBoardServer
             timer = new Timer(tm, options, 1000, 1000);
 
             StartTest.WaitForExit();
-        }
-        public class Options
-        {
-            public string file = "";
-            public PackStart pack;
-        }
+        }        
         public void TimeOut(object obj)
         {
             Options options = (Options)obj;
@@ -410,6 +415,24 @@ namespace DashBoardServer
                     Console.WriteLine(res);
                 }
             }
+        }
+        public string GetVersionStend(string stend)
+        {
+            string result = "";
+            WebRequest req = WebRequest.Create(stend + "sufdversion");
+            WebResponse resp = req.GetResponse();
+            Stream stream = resp.GetResponseStream();
+            StreamReader sr = new System.IO.StreamReader(stream);
+            string html = sr.ReadToEnd();
+            sr.Close();            
+            myReg = new Regex(@"\d.*");
+            match = myReg.Match(html);
+            result += match.Value.Split('&')[0];
+            myReg = new Regex(@"<b>.*");
+            match = myReg.Match(match.Value.Split('&')[1]);
+            result += " " + match.Value.Substring(3);
+
+            return result;
         }
     }
 }
