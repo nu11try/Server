@@ -64,4 +64,4 @@ Function test_start(a, b)
 	Set qtAutoExportResultsOpts = Nothing ' Release the Automatically Export Report Configuration Options object
 	Set qtAutoExportResultsOpts = Nothing ' Release the Automatically Export Report Configuration Options object
 End Function
-Call test_start("\\172.31.197.220\ATST\\TSE1\Tests\GUI_MT_CLS_1_2", "\\172.31.197.220\ATST\\TSE1\Tests\GUI_MT_CLS_1_2\Res1\")
+Call test_start("\\172.31.197.220\ATST\\TSE1\Tests\GUI_MT_CLS_2_6", "\\172.31.197.220\ATST\\TSE1\Tests\GUI_MT_CLS_2_6\Res1\")

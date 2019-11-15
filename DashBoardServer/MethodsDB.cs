@@ -237,7 +237,7 @@ namespace DashBoardServer
         /// <returns></returns>
         public void GetTestsForPack(Message mess)
         {
-            query = "SELECT * FROM tests WHERE `service` = @service AND `used` = 'no' AND `status` = 'add'";
+            query = "SELECT * FROM tests WHERE `service` = @service AND `status` = 'add'";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
@@ -360,17 +360,20 @@ namespace DashBoardServer
             database.CloseConnection();
             for (int i = 0; i < testsPack.id.Count; i++)
             {
+                string id = "";
+                if (testsPack.duplicate[i] != "not") id = testsPack.duplicate[i];
+                else id = testsPack.id[i];
                 query = "SELECT * FROM tests WHERE `service` = @service AND `id` = @id";
                 command = new SQLiteCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
-                command.Parameters.AddWithValue("@id", testsPack.id[i]);
+                command.Parameters.AddWithValue("@id", id);
                 database.OpenConnection();
                 SelectResult = command.ExecuteReader();
                 if (SelectResult.HasRows)
                 {
                     while (SelectResult.Read())
                     {
-                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.browser[i], testsPack.dependon[i]);
+                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.browser[i], testsPack.dependon[i], testsPack.duplicate[i]);
                     }
                 }
                 else
@@ -826,6 +829,7 @@ namespace DashBoardServer
                 te.time.Add("default");
                 te.dependon.Add("{\"args\":[\"not\"]}");
                 te.browser.Add("default");
+                te.duplicate.Add("not");
 
             }
             string teS = JsonConvert.SerializeObject(te);
@@ -1250,7 +1254,96 @@ namespace DashBoardServer
 
             res.Add("ok");
         }
+        public void UpdateDuplicate(Message mess)
+        {
+            Tests tests = new Tests();
+            if(mess.args[3] == "add")
+            {
+                query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@id", mess.args[1]);
+                database.OpenConnection();
+                SQLiteDataReader SelectResult = command.ExecuteReader();
+                if (SelectResult.HasRows)
+                {
+                    SelectResult.Read();
+                    tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    int j = 0;
+                    int q = 0;
+                    for (int i = 0; i < tests.id.Count; i++)
+                    {
+                        if (tests.id[i].Contains(mess.args[2]))
+                        {
+                            j++;
+                        }
+                        if (tests.id[i].Equals(mess.args[2]))
+                        {
+                            q = i;
+                        }
+                    }
+                    tests.start.Add(tests.id.Last());
+                    tests.id.Add(mess.args[2] + "(Дубликат " + j + ")");
+                    tests.restart.Add(tests.restart[q]);
 
+                    tests.time.Add(tests.time[q]);
+                    tests.browser.Add(tests.browser[q]);
+                    tests.dependon.Add(tests.dependon[q]);
+                    tests.duplicate.Add(tests.id[q]);
+
+                }
+                else
+                {
+                    res.Add("error");
+                }
+                SelectResult.Close();
+            }
+            else
+            {
+                query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@id", mess.args[1]);
+                database.OpenConnection();
+                SQLiteDataReader SelectResult = command.ExecuteReader();
+                if (SelectResult.HasRows)
+                {
+                    SelectResult.Read();
+                    tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    int q = 0;
+                    for (int i = 0; i < tests.id.Count; i++)
+                    {
+                        if (tests.id[i].Equals(mess.args[2]))
+                        {
+                            tests.id.RemoveAt(i);
+                            tests.restart.RemoveAt(i);
+                            tests.start.RemoveAt(i);
+                            tests.time.RemoveAt(i);
+                            tests.browser.RemoveAt(i);
+                            tests.dependon.RemoveAt(i);
+                            tests.duplicate.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    res.Add("error");
+                }
+                SelectResult.Close();
+            }
+            query = "UPDATE packs SET `tests` = @tests WHERE `id` = @id AND `service` = @service";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@tests",JsonConvert.SerializeObject(tests));
+            database.OpenConnection();
+            var InsertTesult = command.ExecuteNonQuery();
+            database.CloseConnection();
+            logger.WriteLog(InsertTesult.ToString() + " update testsInPack");
+            res.Add("OK");
+            
+        }
         public void UpdateAutostart(Message mess)
         {
             query = "UPDATE autostart SET `name` = @name, `days` = @days, `time` = @time, `packs` = @packs, `type` = @type WHERE `id` = @id AND `service` = @service";
@@ -1298,6 +1391,7 @@ namespace DashBoardServer
                     tmp.time.Add(te.time[j]);
                     tmp.restart.Add(te.restart[j]);
                     tmp.browser.Add(te.browser[j]);
+                    tmp.duplicate.Add(te.duplicate[j]);
                 }
             }
             SelectResult.Close();
@@ -1418,6 +1512,7 @@ namespace DashBoardServer
             dependon = new List<string>();
             restart = new List<string>();
             browser = new List<string>();
+            duplicate = new List<string>();
         }
         public List<string> id { get; set; }
         public List<string> start { get; set; }
@@ -1425,6 +1520,7 @@ namespace DashBoardServer
         public List<string> dependon { get; set; }
         public List<string> restart { get; set; }
         public List<string> browser { get; set; }
+        public List<string> duplicate { get; set; }
 
     }
 

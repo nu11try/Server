@@ -29,7 +29,7 @@ namespace DashBoardServer
         public string Browser = "";
         public string Time = "";
         public string Stend = "";
-        public string PathToTests = "";        
+        public string PathToTests = "";
 
         public Tests TestsInPack;
         public Dictionary<string, string> ResultTest;
@@ -275,30 +275,60 @@ namespace DashBoardServer
             {
                 try
                 {
-                    File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/startTests.vbs",
-                        AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", true);
-
-                    ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
-                        "AddressHost", pack.Stend);
-
-                    myReg = new Regex(@"http:\/\/.*\/");                    
-                    pack.VersionStends.Add(GetVersionStend(myReg.Match(pack.Stend).Value));
-
-                    if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
-                        ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
-                            "BrowserName", pack.Browser.ToUpper());
-                    else ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
-                            "BrowserName", pack.TestsInPack.browser[i].ToUpper());
-
-                    using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", FileMode.Append))
+                    if (pack.TestsInPack.duplicate[i] == "not")
                     {
-                        byte[] array = System.Text.Encoding.Default.GetBytes("Call test_start(\"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
-                                + "\\" + pack.TestsInPack.id[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
-                                + "\\" + pack.TestsInPack.id[i] + "\\Res1\\" + "\")");
-                        fstream.Write(array, 0, array.Length);
+                        File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/startTests.vbs",
+                            AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", true);
 
-                        pack.FilesToStart.Add(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs");
-                        pack.ResultFolders.Add("Z:\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + pack.TestsInPack.id[i] + "\\Res1\\Report\\run_results.xml");
+                        ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                            "AddressHost", pack.Stend);
+
+                        myReg = new Regex(@"http:\/\/.*\/");
+                        pack.VersionStends.Add(GetVersionStend(myReg.Match(pack.Stend).Value));
+
+                        if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
+                            ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                                "BrowserName", pack.Browser.ToUpper());
+                        else ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                                "BrowserName", pack.TestsInPack.browser[i].ToUpper());
+
+                        using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", FileMode.Append))
+                        {
+                            byte[] array = System.Text.Encoding.Default.GetBytes("Call test_start(\"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                    + "\\" + pack.TestsInPack.id[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                    + "\\" + pack.TestsInPack.id[i] + "\\Res1\\" + "\")");
+                            fstream.Write(array, 0, array.Length);
+
+                            pack.FilesToStart.Add(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs");
+                            pack.ResultFolders.Add("Z:\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + pack.TestsInPack.id[i] + "\\Res1\\Report\\run_results.xml");
+                        }
+                    }
+                    else
+                    {
+                        File.Copy(AppDomain.CurrentDomain.BaseDirectory + "/startTests.vbs",
+                            AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", true);
+                        ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                            "AddressHost", pack.Stend);
+
+                        myReg = new Regex(@"http:\/\/.*\/");
+                        pack.VersionStends.Add(GetVersionStend(myReg.Match(pack.Stend).Value));
+
+                        if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
+                            ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                                "BrowserName", pack.Browser.ToUpper());
+                        else ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
+                                "BrowserName", pack.TestsInPack.browser[i].ToUpper());
+
+                        using (FileStream fstream = new FileStream(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", FileMode.Append))
+                        {
+                            byte[] array = System.Text.Encoding.Default.GetBytes("Call test_start(\"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                    + "\\" + pack.TestsInPack.duplicate[i] + "\", \"" + "\\" + "\\172.31.197.220\\ATST\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\")
+                                    + "\\" + pack.TestsInPack.duplicate[i] + "\\Res" + i + "\\" + "\")");
+                            fstream.Write(array, 0, array.Length);
+
+                            pack.FilesToStart.Add(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs");
+                            pack.ResultFolders.Add("Z:\\" + pack.PathToTests.Replace("Z:\\" + "\\", "\\").Replace("\\" + "\\", "\\") + "\\" + pack.TestsInPack.duplicate[i] + "\\Res"+i+"\\Report\\run_results.xml");
+                        }
                     }
                 }
                 catch (Exception ex)

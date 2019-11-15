@@ -34,11 +34,28 @@ namespace DashBoardServer
         XmlNode attr;
         XmlDocument xDoc = new XmlDocument();
 
+        public XmlElement LoadFile(string resultPath)
+        {
+            XmlElement xRoot = null;
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    System.Threading.Thread.Sleep(1000);
+                    Console.WriteLine("Попытка загрузить файл");
+                    xDoc.Load(resultPath);
+                    xRoot = xDoc.DocumentElement;
+                    Console.WriteLine("Файл загружен");
+                    break;
+                }
+                catch { Console.WriteLine("Отказано"); }
+            }
+            return xRoot;
+        }
         public string TypeResultTest(string resultPath)
         {
             string result = "";
-            xDoc.Load(resultPath);
-            XmlElement xRoot = xDoc.DocumentElement;
+            XmlElement xRoot = LoadFile(resultPath);
             foreach (XmlNode xNode in xRoot)
             {
                 foreach (XmlNode children in xNode.ChildNodes)
@@ -68,9 +85,7 @@ namespace DashBoardServer
             List<Step> listSteps = new List<Step>();
             string duration = "";
             string result = "";
-            XmlDocument xDoc = new XmlDocument();
-            xDoc.Load(resultPath);
-            XmlElement xRoot = xDoc.DocumentElement;
+            XmlElement xRoot = LoadFile(resultPath);
             int flag = 0;
             Step step = new Step();
             step.innerSteps = new List<string>();
