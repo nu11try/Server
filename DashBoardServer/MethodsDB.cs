@@ -1119,9 +1119,20 @@ namespace DashBoardServer
             Message request = new Message();
             Message dirs = new Message();
             Tests tests = new Tests();
+            Tests tests1 = new Tests();
             List<string> packs = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
             command = new SQLiteCommand(query, database.connect);
+            if(mess.args[1] == "no_pack")
+            {
+                mess.args.RemoveAt(1);
+                for(int i = 2; i < mess.args.Count; i++)
+                {
+                    tests1.id.Add(mess.args[i]);
+                    mess.args.RemoveAt(i);
+                    i--;
+                }
+            }
             for (int i = 1; i < mess.args.Count; i++)
             {
                 command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1162,6 +1173,25 @@ namespace DashBoardServer
                         {
                             packs.Add(SelectResult["id"].ToString());
                             tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                            for(int j = 0; j < tests1.id.Count; j++)
+                            {
+                                int q = tests.id.IndexOf(tests1.id[j]);
+                                if (tests.id.Contains(tests1.id[j]))
+                                {
+                                    tests1.id[j] = tests.id[q];
+                                    if(j==0)
+                                        tests1.start.Add("Первый");
+                                    else
+                                        tests1.start.Add(tests1.id[j - 1]);
+                                    tests1.restart.Add(tests.restart[q]);
+                                    tests1.time.Add(tests.time[q]);
+                                    tests1.dependon.Add("{\"args\":[\"not\"]}");
+                                    tests1.duplicate.Add(tests.duplicate[q]);
+                                    tests1.browser.Add(tests.browser[q]);
+                                }
+                            }
+                            if (tests1.id.Count != 0)
+                                tests = tests1;
                             for (int j = 0; j < tests.id.Count; j++)
                             {
                                 query = "SELECT `path` FROM dirs WHERE `service` = @service AND `test` = @test";
@@ -1180,7 +1210,7 @@ namespace DashBoardServer
                                 SelectResult1.Close();
                                 //database1.CloseConnection();
                             }
-                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["tests"].ToString(), SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString());
+                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), JsonConvert.SerializeObject(tests),  SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString());
                             query = "SELECT * FROM stends WHERE `service` = @service";
                             command = new SQLiteCommand(query, database.connect);
                             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1522,6 +1552,16 @@ namespace DashBoardServer
         public List<string> browser { get; set; }
         public List<string> duplicate { get; set; }
 
+        public void Remove(int i )
+        {
+            id.RemoveAt(i);
+            start.RemoveAt(i);
+            time.RemoveAt(i);
+            dependon.RemoveAt(i);
+            restart.RemoveAt(i);
+            browser.RemoveAt(i);
+            duplicate.RemoveAt(i);
+        }
     }
 
     public class Message
