@@ -213,8 +213,8 @@ namespace DashBoardServer
             }
 
            
-            else if (options == "time_out")
-            {
+             if (options == "time_out")
+             {
                 query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
                 command = new SQLiteCommand(query, database.connect);
@@ -227,6 +227,44 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@time_end", "TIMEOUT");
                 command.Parameters.AddWithValue("@time_lose", "TIMEOUT");
                 command.Parameters.AddWithValue("@steps", "TIMEOUT");
+                command.Parameters.AddWithValue("@date", data);
+                command.Parameters.AddWithValue("@version", version);
+                database.OpenConnection();
+                var InsertTesult = command.ExecuteNonQuery();
+                database.CloseConnection();
+                logger.WriteLog("Добавлена статистика для теста " + nameTest);
+             }
+            if (options == "no_version")
+            {
+                
+                if (version == "no_version")
+                {
+                    query = "SELECT * FROM stends WHERE `service` = @service";
+                    command = new SQLiteCommand(query, database.connect);
+                    command.Parameters.AddWithValue("@service", service);
+                    database.OpenConnection();
+                    SQLiteDataReader SelectResult = command.ExecuteReader();
+                    if (SelectResult.HasRows)
+                    {
+                        while (SelectResult.Read())
+                        {
+                            version = SelectResult["version"].ToString();
+                        }
+                    }
+                    SelectResult.Close();
+                    database.CloseConnection();
+                }
+                query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", nameTest);
+                command.Parameters.AddWithValue("@test", nameTest);
+                command.Parameters.AddWithValue("@service", service);
+                command.Parameters.AddWithValue("@result", "Failed");
+                command.Parameters.AddWithValue("@time_step", "no_version");
+                command.Parameters.AddWithValue("@time_end", "no_version");
+                command.Parameters.AddWithValue("@time_lose", "no_version");
+                command.Parameters.AddWithValue("@steps", "no_version");
                 command.Parameters.AddWithValue("@date", data);
                 command.Parameters.AddWithValue("@version", version);
                 database.OpenConnection();

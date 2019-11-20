@@ -59,7 +59,7 @@ namespace DashBoardServer
         Process StartTest = new Process();
         TimerCallback tm;
         Timer timer;
-
+        MethodsDB methodsDB = new MethodsDB();
         private Message Response = new Message();
         // private PackStart pack = new PackStart();
         private List<PackStart> packs = new List < PackStart > ();
@@ -88,7 +88,7 @@ namespace DashBoardServer
                     pack.PathToTests = JsonConvert.DeserializeObject<Message>(Response.args[i + 2]).args[0];
                     pack.TestsInPack = JsonConvert.DeserializeObject<Tests>(Response.args[i + 5]);
 
-                    ConfigStartTest(pack);
+                    ConfigStartTest(pack, data);
                     packs.Add(pack);
                 }
                 packs.ForEach(pack =>
@@ -106,69 +106,136 @@ namespace DashBoardServer
             packs.ForEach(pack =>
             {
                 for (int i = 0; i < pack.ResultFolders.Count(); i++)
-                {
+                { 
                     FlagStarted = true;
+                    string ver = "";
                     try
                     {
                         string bufDependons = JsonConvert.DeserializeObject<Message>(pack.TestsInPack.dependon[i]).args[0];
                         if (bufDependons.Equals("not"))
                         {
-                            StartScript(pack.FilesToStart[i], pack);
-                            try
+                            
+                            while (Int32.Parse(pack.TestsInPack.restart[i]) >= 0)
                             {
-                                if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
-                                else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                myReg = new Regex(@"http:\/\/.*\/");
+                                ver = GetVersionStend(myReg.Match(pack.Stend).Value);
+                                Message message = new Message();
+                                message.Add(pack.Service, ver, data);
+                                methodsDB.UpdateVersion(message);
+                                if (ver == "no_version")
                                 {
-                                    while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
-                                    {
-                                        StartScript(pack.FilesToStart[i], pack);
-                                        pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-                                        try
-                                        {
-                                            if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
-                                            {
-                                                Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
-                                                break;
-                                            }
-                                        }
-                                        catch
-                                        {
-                                            Console.WriteLine("Тайм айт1");
-                                            continue;
-                                        }
-                                    }
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                    pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                }
+                                else
+                                {
+                                    break;
                                 }
                             }
-                            catch
+                            pack.VersionStends.Add(ver);
+                            if (pack.VersionStends[i] != "no_version")
                             {
-                                while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
-                                {
-                                    FlagStarted = true;
-                                    StartScript(pack.FilesToStart[i], pack);
-                                    pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-                                    try
-                                    {
-                                        if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
-                                        {
-                                            Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
-                                            break;
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        continue;
-                                    }
-                                }
+                                StartScript(pack.FilesToStart[i], pack);
                                 try
                                 {
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                    if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                    else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                    {
+                                        while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                        {
+                                            myReg = new Regex(@"http:\/\/.*\/");
+                                            ver = GetVersionStend(myReg.Match(pack.Stend).Value);
+                                            Message message = new Message();
+                                            message.Add(pack.Service, pack.VersionStends[i], data);
+                                            methodsDB.UpdateVersion(message);
+                                            pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                            if (ver == "no_version")
+                                            {
+                                                continue;
+                                            }
+                                            else
+                                            { 
+                                                StartScript(pack.FilesToStart[i], pack);
+                                                try
+                                                {
+                                                    if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                                    {
+                                                        Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                                        break;
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    Console.WriteLine("Тайм айт1");
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        pack.VersionStends.Add(ver);
+                                        if (pack.VersionStends[i] == "no_version")
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i], pack.VersionStends[i]));
+                                        }
+                                        else
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                        }
+                                    }
                                 }
                                 catch
                                 {
-                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out", pack.VersionStends[i]));
+                                    while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                    {
+                                        myReg = new Regex(@"http:\/\/.*\/");
+                                        ver = GetVersionStend(myReg.Match(pack.Stend).Value);
+                                        Message message = new Message();
+                                        message.Add(pack.Service, pack.VersionStends[i], data);
+                                        methodsDB.UpdateVersion(message);
+                                        pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                        if (ver == "no_version")
+                                        {
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            FlagStarted = true;
+                                            StartScript(pack.FilesToStart[i], pack);
+
+                                            try
+                                            {
+                                                if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                                {
+                                                    Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                                    break;
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                    }
+                                    pack.VersionStends.Add(ver);
+                                    if (pack.VersionStends[i] == "no_version")
+                                    {
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i], pack.VersionStends[i]));
+                                    }
+                                    else
+                                    {
+                                        try
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                        }
+                                        catch
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out", pack.VersionStends[i]));
+                                        }
+                                    }
                                 }
+                            }
+                            else
+                            {
+                                pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i], pack.VersionStends[i]));
                             }
                         }
                         else
@@ -181,20 +248,63 @@ namespace DashBoardServer
                                         pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "dependen_error", pack.VersionStends[i]));
                                     else
                                     {
-                                        StartScript(pack.FilesToStart[i], pack);
-                                        if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
-                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
-                                        else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                        while (Int32.Parse(pack.TestsInPack.restart[i]) >= 0)
                                         {
-                                            while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                            myReg = new Regex(@"http:\/\/.*\/");
+                                            ver = GetVersionStend(myReg.Match(pack.Stend).Value);
+                                            Message message = new Message();
+                                            message.Add(pack.Service, ver, data);
+                                            methodsDB.UpdateVersion(message);
+                                            if (ver == "no_version")
                                             {
-                                                StartScript(pack.FilesToStart[i], pack);
                                                 pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-
-                                                if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed")) break;
-
                                             }
-                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                            else
+                                            {
+                                                break;
+                                            }
+                                        }
+                                        pack.VersionStends.Add(ver);
+                                        if (ver != "no_version")
+                                        {
+                                            StartScript(pack.FilesToStart[i], pack);
+                                            if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Passed") || fs.TypeResultTest(pack.ResultFolders[i]).Equals("Warning"))
+                                                pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                            else if (fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                            {
+                                                while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
+                                                {
+                                                    myReg = new Regex(@"http:\/\/.*\/");
+                                                    ver = GetVersionStend(myReg.Match(pack.Stend).Value);
+                                                    Message message = new Message();
+                                                    message.Add(pack.Service, pack.VersionStends[i], data);
+                                                    methodsDB.UpdateVersion(message);
+                                                    pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
+                                                    if (ver == "no_version")
+                                                    {
+                                                        continue;
+                                                    }
+                                                    else
+                                                    {
+                                                        FlagStarted = true;
+                                                        StartScript(pack.FilesToStart[i], pack);
+                                                        if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed")) break;
+                                                    }
+                                                }
+                                                pack.VersionStends.Add(ver);
+                                                if (pack.VersionStends[i] == "no_version")
+                                                {
+                                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i], pack.VersionStends[i]));
+                                                }
+                                                else
+                                                {
+                                                    pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i], pack.VersionStends[i]));
                                         }
                                     }
                                 }
@@ -202,29 +312,49 @@ namespace DashBoardServer
                                 {
                                     while (Int32.Parse(pack.TestsInPack.restart[i]) > 0)
                                     {
+                                        myReg = new Regex(@"http:\/\/.*\/");
+                                        ver = GetVersionStend(myReg.Match(pack.Stend).Value);
+                                        Message message = new Message();
+                                        message.Add(pack.Service, pack.VersionStends[i], data);
+                                        methodsDB.UpdateVersion(message);
+                                        pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
                                         FlagStarted = true;
                                         StartScript(pack.FilesToStart[i], pack);
-                                        pack.TestsInPack.restart[i] = (Int32.Parse(pack.TestsInPack.restart[i]) - 1).ToString();
-                                        try
-                                        {
-                                            if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
-                                            {
-                                                Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
-                                                break;
-                                            }
-                                        }
-                                        catch
+                                        if (ver == "no_version")
                                         {
                                             continue;
                                         }
+                                        else
+                                        {
+                                            try
+                                            {
+                                                if (!fs.TypeResultTest(pack.ResultFolders[i]).Equals("Failed"))
+                                                {
+                                                    Console.WriteLine(fs.TypeResultTest(pack.ResultFolders[i]));
+                                                    break;
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                continue;
+                                            }
+                                        }
                                     }
-                                    try
+                                    pack.VersionStends.Add(ver);
+                                    if (pack.VersionStends[i] == "no_version")
                                     {
-                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i], pack.VersionStends[i]));
                                     }
-                                    catch
+                                    else
                                     {
-                                        pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out", pack.VersionStends[i]));
+                                        try
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, pack.VersionStends[i]));
+                                        }
+                                        catch
+                                        {
+                                            pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "time_out", pack.VersionStends[i]));
+                                        }
                                     }
                                 }
                             }
@@ -269,7 +399,7 @@ namespace DashBoardServer
             writer.Write(content);
             writer.Close();
         }
-        public void ConfigStartTest(PackStart pack)
+        public void ConfigStartTest(PackStart pack, string data)
         {
             for (int i = 0; i < pack.TestsInPack.id.Count; i++)
             {
@@ -282,10 +412,6 @@ namespace DashBoardServer
 
                         ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
                             "AddressHost", pack.Stend);
-
-                        myReg = new Regex(@"http:\/\/.*\/");
-                        pack.VersionStends.Add(GetVersionStend(myReg.Match(pack.Stend).Value));
-
                         if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
                             ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
                                 "BrowserName", pack.Browser.ToUpper());
@@ -309,9 +435,6 @@ namespace DashBoardServer
                             AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs", true);
                         ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
                             "AddressHost", pack.Stend);
-
-                        myReg = new Regex(@"http:\/\/.*\/");
-                        pack.VersionStends.Add(GetVersionStend(myReg.Match(pack.Stend).Value));
 
                         if (pack.TestsInPack.browser[i].Equals("default") || pack.TestsInPack.browser[i].Equals("По умолчанию"))
                             ReplaceInFile(AppDomain.CurrentDomain.BaseDirectory + "test/" + pack.TestsInPack.id[i] + ".vbs",
@@ -449,20 +572,35 @@ namespace DashBoardServer
         public string GetVersionStend(string stend)
         {
             string result = "";
-            WebRequest req = WebRequest.Create(stend + "sufdversion");
-            WebResponse resp = req.GetResponse();
-            Stream stream = resp.GetResponseStream();
-            StreamReader sr = new System.IO.StreamReader(stream);
-            string html = sr.ReadToEnd();
-            sr.Close();            
-            myReg = new Regex(@"\d.*");
-            match = myReg.Match(html);
-            result += match.Value.Split('&')[0];
-            myReg = new Regex(@"<b>.*");
-            match = myReg.Match(match.Value.Split('&')[1]);
-            result += " " + match.Value.Substring(3);
+            try
+            {
+                WebRequest req = WebRequest.Create(stend + "sufdversion");
+                WebResponse resp = req.GetResponse();
+                Stream stream = resp.GetResponseStream();
+                StreamReader sr = new System.IO.StreamReader(stream);
+                string html = sr.ReadToEnd();
+                sr.Close();
+                myReg = new Regex(@"\d.*");
+                match = myReg.Match(html);
+                result += match.Value.Split('&')[0];
+                myReg = new Regex(@"<b>.*");
+                match = myReg.Match(match.Value.Split('&')[1]);
+                result += " " + match.Value.Substring(3);
 
+            }
+            catch
+            {
+                result = "no_version";
+            }
             return result;
         }
     }
 }
+/*MethodsDB methodsDB = new MethodsDB();
+                                            Message message = new Message();
+                                            message.Add(pack.Service, ver, data);
+                                            methodsDB.UpdateVersion(message);
+                                            if (pack.VersionStends[i] == "no_version")
+                                            {
+                                                pack.ResultTest.Add(pack.TestsInPack.id[i], fs.ResultTest(pack.Service, pack.TestsInPack.id[i], pack.ResultFolders[i], data, "no_version", pack.VersionStends[i]));
+                                            }*/

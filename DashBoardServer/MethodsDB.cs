@@ -192,6 +192,22 @@ namespace DashBoardServer
             SelectResult.Close();
             database.CloseConnection();
         }
+
+        public void GetVersion(Message mess)
+        {
+            query = "SELECT `version`, `data` FROM stends WHERE `service` = @service";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read()) res.Add(SelectResult["version"].ToString(), SelectResult["data"].ToString());
+            }
+            SelectResult.Close();
+            database.CloseConnection();
+        }
         /// <summary>
         /// Функция получения тестов определенного сервиса для отображения их в ListView
         /// </summary>
@@ -461,7 +477,7 @@ namespace DashBoardServer
         public void GetTestResult(Message mess)
         {
             // хз на сколько это правильно, но это блять работает
-            query = "SELECT * FROM statistic WHERE `service` = @service ORDER BY number DESC";
+            query = "SELECT * FROM statistic left join tests on statistic.id = tests.id  where statistic.service = @service ORDER BY number DESC";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
@@ -471,7 +487,26 @@ namespace DashBoardServer
                 while (SelectResult.Read())
                 {
                     res.Add( SelectResult["id"].ToString(), SelectResult["result"].ToString(),
-                        SelectResult["time_step"].ToString(), SelectResult["steps"].ToString());
+                        SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["version"].ToString());
+                    if (SelectResult["author"].ToString() == "")
+                    {
+                        query = "SELECT * FROM tests where id = @id and service = @service ";
+                        SQLiteCommand command1 = new SQLiteCommand(query, database.connect);
+                        command1.Parameters.AddWithValue("@service", mess.args[0]);
+                        command1.Parameters.AddWithValue("@id", SelectResult["id"].ToString().Split('(')[0]);
+                        database.OpenConnection();
+                        SQLiteDataReader SelectResult1 = command1.ExecuteReader();
+                        if (SelectResult1.HasRows)
+                        {
+                            SelectResult1.Read();
+                                res.Add(SelectResult1["author"].ToString());
+                        }
+                        SelectResult1.Close();
+                    }
+                    else
+                    {
+                        res.Add(SelectResult["author"].ToString());
+                    }
                 }
             }            
             else
@@ -886,6 +921,7 @@ namespace DashBoardServer
 
             res.Add("OK");
         }
+        
         public void AddAutostart(Message mess)
         {
             query = "INSERT INTO autostart (`id`, `name`, `days`, `service`, `time`, `packs`, `type`)"
@@ -997,6 +1033,40 @@ namespace DashBoardServer
             UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
             res.Add("OK");
+        }
+        public void UpdateVersion(Message mess)
+        {
+            if (mess.args[1] != "no_version")
+            {
+                query = "SELECT * FROM stends where `service` = @service and `version` = @version";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@version", mess.args[1]);
+                database.OpenConnection();
+                SQLiteDataReader SelectResult = command.ExecuteReader();
+                Message messeage = new Message();
+                if (SelectResult.HasRows)
+                {
+                    while (SelectResult.Read()) messeage.Add(
+                        SelectResult["version"].ToString());
+                }
+                SelectResult.Close();
+                database.CloseConnection();
+                if (messeage.args.Count == 0)
+                {
+                    query = "UPDATE stends SET `version` = @version," +
+                    "`data` = @data WHERE `service` = @service";
+                    command = new SQLiteCommand(query, database.connect);
+                    command.Parameters.AddWithValue("@version", mess.args[1]);
+                    command.Parameters.AddWithValue("@data", mess.args[2]);
+                    command.Parameters.AddWithValue("@service", mess.args[0]);
+
+                    database.OpenConnection();
+                    var UpdateTest = command.ExecuteNonQuery();
+                    database.CloseConnection();
+                    logger.WriteLog("{0} update version", UpdateTest.ToString());
+                }
+            }
         }
         public void UpdateTestChange(Message mess)
         {
