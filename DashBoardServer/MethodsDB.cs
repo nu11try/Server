@@ -486,7 +486,7 @@ namespace DashBoardServer
             {
                 while (SelectResult.Read())
                 {
-                    res.Add( SelectResult["id"].ToString(), SelectResult["result"].ToString(),
+                    res.Add( SelectResult["name"].ToString(), SelectResult["result"].ToString(),
                         SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["version"].ToString());
                     if (SelectResult["author"].ToString() == "")
                     {
@@ -516,6 +516,22 @@ namespace DashBoardServer
             SelectResult.Close();
             database.CloseConnection();
 
+        }
+        public void GetTestResultVersion(Message mess)
+        {
+            query = "SELECT * FROM statistic where `service` = @service and `version` = @version and (`result`= 'Passed' or `result` = 'Warning')";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@version", mess.args[1]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read())
+                {
+                    res.Add(SelectResult["result"].ToString());     
+                }
+            }
         }
         /// <summary>
         /// Функция получение подробной информации по результату теста
