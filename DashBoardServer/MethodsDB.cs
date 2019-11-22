@@ -507,6 +507,7 @@ namespace DashBoardServer
                     {
                         res.Add(SelectResult["author"].ToString());
                     }
+                    res.Add(SelectResult["id"].ToString());
                 }
             }            
             else
@@ -519,10 +520,11 @@ namespace DashBoardServer
         }
         public void GetTestResultVersion(Message mess)
         {
-            query = "SELECT * FROM statistic where `service` = @service and `version` = @version and (`result`= 'Passed' or `result` = 'Warning')";
+            query = "SELECT * FROM statistic where `service` = @service and `version` = @version and `id` = @id and (`result`= 'Passed' or `result` = 'Warning')";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@version", mess.args[1]);
+            command.Parameters.AddWithValue("@id", mess.args[2]);
             database.OpenConnection();
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
@@ -551,7 +553,7 @@ namespace DashBoardServer
                 while (SelectResult.Read())
                 {
                     res.Add(SelectResult["date"].ToString(), SelectResult["result"].ToString(), 
-                        SelectResult["version"].ToString(), SelectResult["time_end"].ToString(), SelectResult["id"].ToString());
+                        SelectResult["version"].ToString(), SelectResult["time_end"].ToString(), SelectResult["id"].ToString(), SelectResult["version"].ToString());
                 }
             }
             else

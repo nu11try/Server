@@ -3415,3 +3415,73 @@ no such table: version
 2019-11-21 11:15:21 [1] -- {0} update pack
 2019-11-21 11:20:41 [LOG] -- 1 update testsInPack
 2019-11-21 11:20:43 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:44 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:45 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:48 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:49 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:50 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:51 [1] -- {0} update test
+2019-11-21 17:03:52 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:53 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:54 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:55 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:55 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:56 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:57 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:57 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:58 [LOG] -- 1 update testsInPack
+2019-11-21 17:03:59 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:00 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:02 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:03 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:06 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:07 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:08 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:09 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:10 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:12 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:13 [LOG] -- 1 update testsInPack
+2019-11-21 17:04:13 [LOG] -- 1 update testsInPack
+2019-11-22 1:00:38 [LOG] -- Обновлен статус автозапуска! Произведен запуск автостарт
+2019-11-22 1:00:38 [LOG] -- Обновлены статусы наборов! Произведен запуск набора ццццццццц
+2019-11-22 1:00:38 [LOG] -- Обновлены статусы наборов! Произведен запуск набора цццц
+2019-11-22 1:00:39 [1] -- {0} update version
+2019-11-22 1:03:56 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_1
+2019-11-22 1:03:56 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_2
+2019-11-22 1:03:56 [START] -- [ЗАПУСК ТЕСТОВ] C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\test/GUI_MT_CLS_1_2.vbs
+2019-11-22 1:06:38 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_3
+2019-11-22 1:09:46 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_2_6
+2019-11-22 1:09:47 [START] -- [СТАТУС НАБОРА ОБНОВЛЕН] ццццццццц
+2019-11-22 1:12:29 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_1
+2019-11-22 1:18:21 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_2_6
+2019-11-22 1:19:47 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_3
+2019-11-22 1:21:50 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_3_4
+2019-11-22 1:21:50 [START] -- [СТАТУС НАБОРА ОБНОВЛЕН] цццц
+2019-11-22 13:59:34 [LOG] -- 1 update testsInPack
+2019-11-22 13:59:45 [LOG] -- 1 update testsInPack
+2019-11-22 13:59:47 [1] -- {0} update test
+2019-11-22 13:59:48 [LOG] -- 1 update testsInPack
+2019-11-22 13:59:51 [1] -- {0} update test
+2019-11-22 13:59:53 [1] -- {0} update test
+2019-11-22 13:59:56 [LOG] -- 1 update testsInPack
+2019-11-22 14:15:43 [LOG] -- 1 update testsInPack
+2019-11-22 14:15:44 [LOG] -- 1 update testsInPack
+2019-11-22 14:15:46 [LOG] -- 1 update testsInPack
+2019-11-22 14:15:47 [LOG] -- 1 update testsInPack
+2019-11-22 14:15:49 [LOG] -- 1 update testsInPack
+2019-11-22 14:15:50 [LOG] -- 1 update testsInPack
+2019-11-22 16:11:43 [LOG] -- 1 update testsInPack
+2019-11-22 16:11:44 [LOG] -- 1 update testsInPack
+2019-11-22 16:11:46 [LOG] -- 1 update testsInPack
+2019-11-22 16:11:47 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:14 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:15 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:15 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:16 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:18 [1] -- {0} update test
+2019-11-22 16:18:23 [1] -- {0} update test
+2019-11-22 16:18:26 [1] -- {0} update test
+2019-11-22 16:18:27 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:28 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:28 [LOG] -- 1 update testsInPack
+2019-11-22 16:18:29 [LOG] -- 1 update testsInPack
