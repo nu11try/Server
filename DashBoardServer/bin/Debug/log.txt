@@ -3485,3 +3485,65 @@ no such table: version
 2019-11-22 16:18:28 [LOG] -- 1 update testsInPack
 2019-11-22 16:18:28 [LOG] -- 1 update testsInPack
 2019-11-22 16:18:29 [LOG] -- 1 update testsInPack
+2019-11-27 10:42:04 [LOG] -- 1 create bug
+2019-11-27 10:47:17 [LOG] -- 1 create bug
+2019-11-27 10:48:40 [LOG] -- 1 create bug
+2019-11-27 10:49:08 [LOG] -- 1 create bug
+2019-11-27 10:49:35 [LOG] -- 1 create bug
+2019-11-27 10:51:24 [LOG] -- 1 create bug
+2019-11-27 10:52:18 [LOG] -- 1 create bug
+2019-11-27 10:54:13 [LOG] -- 1 create bug
+2019-11-27 11:05:31 [LOG] -- 1 create bug
+2019-11-27 12:00:48 [LOG] -- 1 create bug
+2019-11-27 12:01:19 [LOG] -- 1 create bug
+2019-11-27 12:03:27 [LOG] -- 1 create bug
+2019-11-27 12:18:19 [LOG] -- 1 update testsInPack
+2019-11-27 12:18:21 [LOG] -- 1 update testsInPack
+2019-11-27 12:18:22 [LOG] -- 1 update testsInPack
+2019-11-27 12:18:23 [LOG] -- 1 update testsInPack
+2019-11-27 12:18:24 [LOG] -- 1 update testsInPack
+2019-11-27 12:18:25 [LOG] -- 1 update testsInPack
+2019-11-27 12:26:21 [1] -- {0} create packs
+2019-11-27 12:26:21 [1] -- {0} update test
+2019-11-27 12:26:21 [1] -- {0} update test
+2019-11-27 12:26:21 [1] -- {0} update test
+2019-11-27 12:26:34 [LOG] -- Обновлены статусы наборов! Произведен запуск набора Cls1
+2019-11-27 12:26:35 [1] -- {0} update version
+2019-11-27 12:29:05 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_1
+2019-11-27 12:30:52 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_2
+2019-11-27 12:31:46 [LOG] -- Добавлена статистика для теста GUI_MT_CLS_1_3
+2019-11-27 12:31:46 [START] -- [СТАТУС НАБОРА ОБНОВЛЕН] Cls1
+2019-11-27 14:07:26 [LOG] -- 1 create bug
+2019-11-27 14:08:50 [LOG] -- 1 create bug
+2019-11-27 14:09:33 [LOG] -- 1 create bug
+2019-11-27 14:11:52 [LOG] -- 1 create bug
+2019-11-27 14:37:52 [1] -- {0} update test
+2019-11-27 14:37:56 [1] -- {0} update test
+2019-11-27 14:37:59 [1] -- {0} update test
+2019-11-27 14:38:00 [1] -- {0} update test
+2019-11-27 14:38:18 [LOG] -- 1 create bug
+2019-11-27 14:38:18 [LOG] -- 1 create bug
+2019-11-27 14:38:18 [LOG] -- 1 create bug
+2019-11-27 14:43:42 [LOG] -- 1 create bug
+2019-11-27 14:43:42 [LOG] -- 1 create bug
+2019-11-27 14:43:42 [LOG] -- 1 create bug
+2019-11-27 14:47:07 [LOG] -- 1 create bug
+2019-11-27 14:47:07 [LOG] -- 1 create bug
+2019-11-27 14:47:07 [LOG] -- 1 create bug
+2019-11-27 14:47:42 [LOG] -- 1 create bug
+2019-11-27 14:49:28 [LOG] -- 1 create bug
+2019-11-27 14:49:28 [LOG] -- 1 create bug
+2019-11-27 14:49:28 [LOG] -- 1 create bug
+2019-11-27 15:44:47 [1] -- {0} update pack
+2019-11-27 15:46:15 [LOG] -- 1 update testsInPack
+2019-11-27 15:46:26 [LOG] -- 1 update testsInPack
+2019-11-27 15:49:17 [LOG] -- 1 create bug
+2019-11-27 15:49:17 [LOG] -- 1 create bug
+2019-11-27 15:49:17 [LOG] -- 1 create bug
+2019-11-27 16:07:15 [1] -- {0} create packs
+2019-11-27 16:07:16 [1] -- {0} update test
+2019-11-27 16:07:16 [1] -- {0} update test
+2019-11-27 16:07:16 [1] -- {0} update test
+2019-11-27 16:07:50 [LOG] -- 1 create auto
+2019-11-27 16:12:35 [LOG] -- 1 create auto
+2019-11-27 16:12:43 [LOG] -- 1 update auto

@@ -162,3 +162,5 @@ C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.csproj.Ge
 C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.csproj.CopyComplete
 C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.exe
 C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.pdb
+C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\Atlassian.Jira.dll
+C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\RestSharp.dll
