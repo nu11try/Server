@@ -11,7 +11,7 @@ namespace DashBoardServer
     class ConnectToDemon
     {
         const int port = 8889;
-        const string address = "172.31.197.232";
+        const string address = "172.31.197.89";
         //const string address = "127.0.0.1";
 
         private RequestDemon request = new RequestDemon();

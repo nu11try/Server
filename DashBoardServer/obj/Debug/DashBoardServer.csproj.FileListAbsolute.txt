@@ -164,3 +164,5 @@ C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.exe
 C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.pdb
 C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\Atlassian.Jira.dll
 C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\RestSharp.dll
+C:\programs\Dash\Server\DashBoardServer\bin\Debug\Atlassian.Jira.dll
+C:\programs\Dash\Server\DashBoardServer\bin\Debug\RestSharp.dll

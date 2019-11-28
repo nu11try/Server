@@ -993,8 +993,8 @@ namespace DashBoardServer
         }
         public void AddStatisticDemon(Message mess)
         {
-            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
-                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
+            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`)" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend)";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[0]);
             command.Parameters.AddWithValue("@test", mess.args[1]);
@@ -1006,6 +1006,7 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@steps", JsonConvert.SerializeObject(mess.args[6]));
             command.Parameters.AddWithValue("@date", mess.args[7]);
             command.Parameters.AddWithValue("@version", mess.args[8]);
+            command.Parameters.AddWithValue("@stend", mess.args[9]);
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
@@ -1550,17 +1551,8 @@ namespace DashBoardServer
                                 SelectResult1.Close();
                                 //database1.CloseConnection();
                             }
-                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), JsonConvert.SerializeObject(tests),  SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString());
-                            query = "SELECT * FROM stends WHERE `service` = @service";
-                            command = new SQLiteCommand(query, database.connect);
-                            command.Parameters.AddWithValue("@service", mess.args[0]);
-                            database.OpenConnection();
-                            SelectResult1 = command.ExecuteReader();
-                            if (SelectResult1.HasRows)
-                            {
-                                while (SelectResult1.Read()) request.Add(SelectResult1["url"].ToString());
-                            }
-                            SelectResult1.Close();
+                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), JsonConvert.SerializeObject(tests),  SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString(), SelectResult["stend"].ToString());
+                           
                         }
                     }
                     SelectResult.Close();
