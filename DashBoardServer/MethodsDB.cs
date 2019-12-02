@@ -1005,11 +1005,15 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@time_lose", 0);
             command.Parameters.AddWithValue("@steps", JsonConvert.SerializeObject(mess.args[8]));
             command.Parameters.AddWithValue("@date", mess.args[9]);
-            command.Parameters.AddWithValue("@version", mess.args[9]);
-            command.Parameters.AddWithValue("@stend", mess.args[10]);
+            command.Parameters.AddWithValue("@version", mess.args[10]);
+            command.Parameters.AddWithValue("@stend", mess.args[11]);
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
+
+            Message message = new Message();
+            message.Add(mess.args[1]);
+            UpdateStatusPack(message);
         }
         /// <summary>
         /// Функция добавления набора в БД
