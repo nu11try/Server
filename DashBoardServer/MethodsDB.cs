@@ -194,7 +194,6 @@ namespace DashBoardServer
             SelectResult.Close();
             database.CloseConnection();
         }
-
         public void GetStends(Message mess)
         {
             query = "SELECT `url` FROM stends";
@@ -602,11 +601,12 @@ namespace DashBoardServer
 
         }
         public void GetTestResult(Message mess)
-        {
+        {            
             // хз на сколько это правильно, но это блять работает
-            query = "SELECT * FROM statistic left join tests on statistic.id = tests.id  where statistic.service = @service ORDER BY number DESC";
+            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend ORDER BY number DESC";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@stend", mess.args[1]);
             database.OpenConnection();
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
@@ -669,10 +669,10 @@ namespace DashBoardServer
         /// <returns></returns>
         public void GetTestResultInfo(Message mess)
         {
-
-            query = "SELECT * FROM statistic WHERE `service` = @service ORDER BY number DESC";
+            query = "SELECT * FROM statistic WHERE `service` = @service AND `stend` = @stend ORDER BY number DESC";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@stend", mess.args[1]);
             database.OpenConnection();
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
@@ -996,17 +996,17 @@ namespace DashBoardServer
             query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend)";
             command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[0]);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            command.Parameters.AddWithValue("@service", mess.args[2]);
-            command.Parameters.AddWithValue("@result", mess.args[3]);
-            command.Parameters.AddWithValue("@time_step", JsonConvert.SerializeObject(mess.args[4]));
-            command.Parameters.AddWithValue("@time_end", mess.args[5]);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@test", mess.args[2]);
+            command.Parameters.AddWithValue("@service", mess.args[3]);
+            command.Parameters.AddWithValue("@result", mess.args[4]);
+            command.Parameters.AddWithValue("@time_step", JsonConvert.SerializeObject(mess.args[5]));
+            command.Parameters.AddWithValue("@time_end", mess.args[6]);
             command.Parameters.AddWithValue("@time_lose", 0);
-            command.Parameters.AddWithValue("@steps", JsonConvert.SerializeObject(mess.args[6]));
-            command.Parameters.AddWithValue("@date", mess.args[7]);
-            command.Parameters.AddWithValue("@version", mess.args[8]);
-            command.Parameters.AddWithValue("@stend", mess.args[9]);
+            command.Parameters.AddWithValue("@steps", JsonConvert.SerializeObject(mess.args[8]));
+            command.Parameters.AddWithValue("@date", mess.args[9]);
+            command.Parameters.AddWithValue("@version", mess.args[9]);
+            command.Parameters.AddWithValue("@stend", mess.args[10]);
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();

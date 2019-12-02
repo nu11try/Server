@@ -11,7 +11,7 @@ namespace DashBoardServer
     class ConnectToDemon
     {
         const int port = 8889;
-        const string address = "172.31.197.89";
+        string address = "";
         //const string address = "127.0.0.1";
 
         private RequestDemon request = new RequestDemon();
@@ -23,18 +23,25 @@ namespace DashBoardServer
         /// <param name="msg">Сообщение</param>
         /// <param name="service">Сервис</param>
         /// <returns></returns>
-        public string StartTestsInDemon(object param)
+        public void StartTestsInDemon(object param)
         {
             request.args = param;
             bufJSON = JsonConvert.SerializeObject(request);
             bufJSON = bufJSON.Replace("{\"args\":{\"args\":[", "{\"args\":[");
             bufJSON = bufJSON.Remove(bufJSON.Length - 1, 1);
             Console.WriteLine(bufJSON);
-            return ConnectServer(bufJSON);
+            Message packs = new Message();
+            packs = JsonConvert.DeserializeObject<Message>(bufJSON);
+            for (int i = 0; i < packs.args.Count; i += 9)
+            {
+                address = packs.args[i + 3].Split(' ')[2];
+                ConnectServer(bufJSON);
+            }            
         }
 
         private string ConnectServer(string json)
         {
+            Console.WriteLine(address + " : " + port);
             TcpClient client = null;
             StringBuilder builder = new StringBuilder();
             string response = "";
