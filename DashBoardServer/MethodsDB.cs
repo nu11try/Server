@@ -57,7 +57,7 @@ namespace DashBoardServer
             if (SelectResult.HasRows)
             {
                 while (SelectResult.Read())
-                {
+                {                    
                     query = "SELECT `full_name` FROM service WHERE `name` = @name";
                     command = new SQLiteCommand(query, database.connect);
                     Message serviceName = JsonConvert.DeserializeObject<Message>(SelectResult["projects"].ToString());
@@ -1081,7 +1081,7 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@steps", mess.args[5]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@author", mess.args[3]);
-            command.Parameters.AddWithValue("@test", "--");
+            command.Parameters.AddWithValue("@test", "{\"args\":[\"not\"]}");
             command.Parameters.AddWithValue("@id_doc", mess.args[4]);
             command.Parameters.AddWithValue("@date", mess.args[2]);
             database.OpenConnection();
