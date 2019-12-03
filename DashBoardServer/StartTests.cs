@@ -4,7 +4,7 @@
     {
         private ConnectToDemon connectDemon = new ConnectToDemon();
 
-        public void Init(object RESPONSE)
+        public void Event(object RESPONSE)
         {
             connectDemon.StartTestsInDemon(RESPONSE);
             return;
