@@ -38,9 +38,11 @@ namespace DashBoardServer
 
                 try
                 {
+                    /*
                     Autostart autostart = new Autostart();
                     Thread autoStartThread = new Thread(new ParameterizedThreadStart(autostart.Init));
                     autoStartThread.Start();
+                    */
                 }
                 catch (Exception ex)
                 {

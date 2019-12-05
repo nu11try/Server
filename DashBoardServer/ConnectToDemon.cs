@@ -29,10 +29,9 @@ namespace DashBoardServer
             bufJSON = JsonConvert.SerializeObject(request);
             bufJSON = bufJSON.Replace("{\"args\":{\"args\":[", "{\"args\":[");
             bufJSON = bufJSON.Remove(bufJSON.Length - 1, 1);
-            Console.WriteLine(bufJSON);
             Message packs = new Message();
             packs = JsonConvert.DeserializeObject<Message>(bufJSON);
-            for (int i = 0; i < packs.args.Count; i += 9)
+            for (int i = 0; i < packs.args.Count; i += 10)
             {
                 address = packs.args[i + 3].Split(' ')[2];
                 ConnectServer(bufJSON);

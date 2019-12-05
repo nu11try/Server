@@ -1012,7 +1012,7 @@ namespace DashBoardServer
             database.CloseConnection();
 
             Message param = new Message();
-            param.Add(mess.args[10], mess.args[9], mess.args[8]);
+            param.Add(mess.args[0], mess.args[10], mess.args[9], mess.args[8]);
             UpdateVersion(param);
             Message message = new Message();
             message.Add(mess.args[1]);
@@ -1164,12 +1164,15 @@ namespace DashBoardServer
         }
         public void DeleteAutostart(Message mess)
         {
-            query = "DELETE FROM autostart WHERE `service`= @service AND status = 'start' AND TYPE = 'one'";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            database.OpenConnection();
-            command.ExecuteNonQuery();
-            database.CloseConnection();
+            foreach (var id in mess.args)
+            {
+                query = "DELETE FROM autostart WHERE `service`= @service AND status = 'start' AND TYPE = 'one'";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", id);
+                database.OpenConnection();
+                command.ExecuteNonQuery();
+                database.CloseConnection();
+            }
         }
         public void DeleteBug(Message mess)
         {
@@ -1335,7 +1338,7 @@ namespace DashBoardServer
                     command = new SQLiteCommand(query, database.connect);
                     command.Parameters.AddWithValue("@version", mess.args[2]);
                     command.Parameters.AddWithValue("@data", mess.args[3]);
-                    command.Parameters.AddWithValue("@url", mess.args[1]);
+                    command.Parameters.AddWithValue("@service", mess.args[0]);
                     database.OpenConnection();
                     var UpdateTest = command.ExecuteNonQuery();
                     database.CloseConnection();
@@ -1711,6 +1714,7 @@ namespace DashBoardServer
         }
         public void UpdateStatusAutostart(Message mess)
         {
+            foreach(var el in mess.args) Console.WriteLine("Наборы для обновления статуса = " + el);
             query = "UPDATE autostart SET `status` = 'no_start' WHERE `status` = 'start' AND `service`= @service " +
                 "AND `id` = @id";
             command = new SQLiteCommand(query, database.connect);
@@ -1722,12 +1726,16 @@ namespace DashBoardServer
         }
         public void UpdateStatusPack(Message mess)
         {
-            query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[0]);
-            database.OpenConnection();
-            command.ExecuteNonQuery();
-            database.CloseConnection();
+            foreach (var el in mess.args) Console.WriteLine("Наборы для обновления статуса 11 = " + el);
+            foreach (var id in mess.args)
+            {
+                query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", id);
+                database.OpenConnection();
+                command.ExecuteNonQuery();
+                database.CloseConnection();
+            }
         }
         public void UpdateTestOfPack(Message mess)
         {
