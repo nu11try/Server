@@ -168,3 +168,8 @@ C:\programs\Dash\Server\DashBoardServer\bin\Debug\Atlassian.Jira.dll
 C:\programs\Dash\Server\DashBoardServer\bin\Debug\RestSharp.dll
 E:\GitHub\Server\DashBoardServer\bin\Debug\Atlassian.Jira.dll
 E:\GitHub\Server\DashBoardServer\bin\Debug\RestSharp.dll
+E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardServer.exe.manifest
+E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardServer.application
+E:\GitHub\Server\DashBoardServer\obj\Debug\DashBoardServer.exe.manifest
+E:\GitHub\Server\DashBoardServer\obj\Debug\DashBoardServer.application
+E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardSQL.db

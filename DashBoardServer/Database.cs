@@ -1,4 +1,6 @@
 ﻿using System.Data.SQLite;
+using System.Diagnostics;
+using System.IO;
 
 namespace DashBoardServer
 {
@@ -8,7 +10,7 @@ namespace DashBoardServer
 
         public Database()
         {
-            connect = new SQLiteConnection("Data Source=DashBoardSQL.db");
+            connect = new SQLiteConnection("Data Source=" + Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + "\\DashBoardSQL.db");
         }
 
         public void OpenConnection()
