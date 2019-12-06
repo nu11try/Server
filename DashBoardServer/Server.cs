@@ -37,12 +37,10 @@ namespace DashBoardServer
                 Console.WriteLine("==================================");
 
                 try
-                {
-                    /*
+                {                    
                     Autostart autostart = new Autostart();
                     Thread autoStartThread = new Thread(new ParameterizedThreadStart(autostart.Init));
-                    autoStartThread.Start();
-                    */
+                    autoStartThread.Start();                    
                 }
                 catch (Exception ex)
                 {

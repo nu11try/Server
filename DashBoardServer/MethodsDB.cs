@@ -1017,7 +1017,7 @@ namespace DashBoardServer
             Message message = new Message();
             message.Add(mess.args[1]);
             UpdateStatusPack(message);
-
+            foreach (var el in mess.args) Console.WriteLine(el + "\n");
         }
         /// <summary>
         /// Функция добавления набора в БД
