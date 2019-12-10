@@ -9,5 +9,10 @@
             connectDemon.StartTestsInDemon(RESPONSE);
             return;
         }
+        public void StopEvent(object RESPONSE)
+        {
+            connectDemon.StopTestsInDemon(RESPONSE);
+            return;
+        }
     }
 }

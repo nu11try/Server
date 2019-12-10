@@ -21,5 +21,15 @@ namespace DashBoardServer
                 fstream.Write(array, 0, array.Length);
             }
         }
+        public void WriteFileText(string msg)
+        {
+            using (FileStream fstream = new FileStream(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + "\\test.txt", FileMode.Create))
+            {
+                // преобразуем строку в байты
+                byte[] array = System.Text.Encoding.Default.GetBytes(msg + "\n");
+                // запись массива байтов в файл
+                fstream.Write(array, 0, array.Length);
+            }
+        }
     }
 }

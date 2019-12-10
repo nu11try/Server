@@ -59,7 +59,7 @@ namespace DashBoardServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("sdfsf = " + ex.Message);
             }
             finally
             {

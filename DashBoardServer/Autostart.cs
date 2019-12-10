@@ -39,7 +39,6 @@ namespace DashBoardServer
         public void CheckTime(object obj)
         {
             options = new List<OptionsAutostart>();
-            Console.WriteLine("Packs");
             query = "SELECT * FROM autostart";
             command = new SQLiteCommand(query, database.connect);
             database.OpenConnection();
