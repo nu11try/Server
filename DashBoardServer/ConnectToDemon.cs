@@ -45,7 +45,7 @@ namespace DashBoardServer
             bufJSON = (string)param;
             request.args = bufJSON;
             Message packs = new Message();
-            packs = JsonConvert.DeserializeObject<Message>(p);
+            packs = JsonConvert.DeserializeObject<Message>(bufJSON);
             address = packs.args[1].Split(' ')[2];
             File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "param.txt", bufJSON);
             ConnectServer(bufJSON);
