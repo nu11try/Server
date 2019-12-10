@@ -1219,6 +1219,19 @@ namespace DashBoardServer
         //-------------------------------------------------------------------------------------       
         // ФУНКЦИИ ОБНОВЛЕНИЯ
         //-------------------------------------------------------------------------------------
+        public void updateTestsNow(Message mess)
+        {
+            query = "UPDATE testsNow SET `id` = @id, `date` = @date WHERE `ip` = @ip";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[2]);
+            command.Parameters.AddWithValue("@ip", mess.args[1]);
+            command.Parameters.AddWithValue("@date", mess.args[3]);
+
+            database.OpenConnection();
+            var UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
+            logger.WriteLog("{0} update test", UpdateTest.ToString());
+        }
         public void UpdateTest(Message mess)
         {
             Comments comments = readTextOfTest(mess.args[0], mess.args[1]);

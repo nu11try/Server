@@ -173,3 +173,8 @@ E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardServer.application
 E:\GitHub\Server\DashBoardServer\obj\Debug\DashBoardServer.exe.manifest
 E:\GitHub\Server\DashBoardServer\obj\Debug\DashBoardServer.application
 E:\GitHub\Server\DashBoardServer\bin\Debug\DashBoardSQL.db
+C:\programs\Dash\Server\DashBoardServer\bin\Debug\DashBoardSQL.db
+C:\programs\Dash\Server\DashBoardServer\bin\Debug\DashBoardServer.exe.manifest
+C:\programs\Dash\Server\DashBoardServer\bin\Debug\DashBoardServer.application
+C:\programs\Dash\Server\DashBoardServer\obj\Debug\DashBoardServer.exe.manifest
+C:\programs\Dash\Server\DashBoardServer\obj\Debug\DashBoardServer.application

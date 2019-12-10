@@ -36,8 +36,10 @@ namespace DashBoardServer
             for (int i = 0; i < packs.args.Count - 1; i += 9) // нужно count-1 и i+=9 так как аргументов у набора 9 и в самом конце добавляется еще 1 ("Start") 
             {
                 address = packs.args[i + 3].Split(' ')[2];
-                File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "param.txt", bufJSON);
-                ConnectServer(bufJSON);
+                Random rnd = new Random();
+                string nameText = "\\" + rnd.Next() + ".txt";
+                File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
+                ConnectServer(bufJSON, nameText);
             }
         }
         public void StopTestsInDemon(object param)
@@ -47,11 +49,13 @@ namespace DashBoardServer
             Message packs = new Message();
             packs = JsonConvert.DeserializeObject<Message>(bufJSON);
             address = packs.args[1].Split(' ')[2];
-            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + "param.txt", bufJSON);
-            ConnectServer(bufJSON);
+            Random rnd = new Random();
+            string nameText = "\\" + rnd.Next() + ".txt";
+            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
+            ConnectServer(bufJSON, nameText);
         }
 
-        private string ConnectServer(string json)
+        private string ConnectServer(string json, string nameText)
         {
             Console.WriteLine(address + " : " + port);
             TcpClient client = null;
@@ -62,7 +66,8 @@ namespace DashBoardServer
                 client = new TcpClient(address, port);
                 NetworkStream stream = client.GetStream();
 
-                byte[] data = File.ReadAllBytes(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + "\\param.txt");
+                byte[] data = File.ReadAllBytes(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + nameText);
+                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
                 /*
                 // преобразуем сообщение в массив байтов
                 byte[] data = new byte[] { };
@@ -96,9 +101,11 @@ namespace DashBoardServer
                     bytesSent += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + "param.txt", data);
-                string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "param.txt").Replace("\n", " ");
-
+                Random rnd = new Random();
+                nameText = "\\" + rnd.Next() + ".txt";
+                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
+                string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
+                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
                 byte[] fileSizeBytes = new byte[4];
                 int bytes = stream.Read(fileSizeBytes, 0, 4);
                 int dataLengthResponse = BitConverter.ToInt32(fileSizeBytes, 0);
@@ -114,8 +121,10 @@ namespace DashBoardServer
                     bytesRead += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + "param.txt", data);
-                param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "param.txt").Replace("\n", " ");
+                nameText = "\\" + rnd.Next() + ".txt";
+                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
+                param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
+                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
                 response = param;
             }
             catch (Exception ex)
