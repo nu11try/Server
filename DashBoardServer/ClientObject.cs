@@ -12,6 +12,7 @@ namespace DashBoardServer
         MethodsDB methodsDB = new MethodsDB();
         FreeRAM freeRAM = new FreeRAM();
 
+        string nameText = "";
         public ClientObject(TcpClient tcpClient)
         {
             client = tcpClient;
@@ -23,22 +24,6 @@ namespace DashBoardServer
             try
             {
                 stream = client.GetStream();
-                /*
-                data = new byte[9999999]; // буфер для получаемых данных
-                                              // получаем сообщение
-                StringBuilder builder = new StringBuilder();
-                int bytes = 0;
-                do
-                {
-                    bytes = stream.Read(data, 0, data.Length);
-                    builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
-                }
-                while (stream.DataAvailable);
-                string buf = methodsDB.transformation(builder.ToString());
-                data = Encoding.Unicode.GetBytes(buf);
-                stream.Write(data, 0, data.Length);
-                builder.Clear();*/
-
                 byte[] fileSizeBytes = new byte[4];
                 int bytes = stream.Read(fileSizeBytes, 0, 4);
                 int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
@@ -55,14 +40,13 @@ namespace DashBoardServer
                     bytesRead += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                Random rnd = new Random();
-                string nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
+                nameText = DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);                
                 string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
                 string buf = methodsDB.transformation(param);
 
-                nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
+                nameText = DateTime.Now.ToString("ddMMyyyyhhmmfffss");
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, Encoding.UTF8.GetBytes(buf));
                 data = File.ReadAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText);
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
@@ -77,9 +61,7 @@ namespace DashBoardServer
                     bytesSent += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-
-                //data = Encoding.Unicode.GetBytes(buf);
-                //stream.Write(data, 0, data.Length);        
+ 
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
             }
             catch (Exception ex)

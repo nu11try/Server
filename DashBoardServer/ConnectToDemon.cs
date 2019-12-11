@@ -18,6 +18,7 @@ namespace DashBoardServer
 
         private RequestDemon request = new RequestDemon();
         string bufJSON;
+        string nameText = "";
 
         /// <summary>
         /// Функциия для запуска запроса на коннект к серверу
@@ -36,8 +37,7 @@ namespace DashBoardServer
             for (int i = 0; i < packs.args.Count - 1; i += 9) // нужно count-1 и i+=9 так как аргументов у набора 9 и в самом конце добавляется еще 1 ("Start") 
             {
                 address = packs.args[i + 3].Split(' ')[2];
-                Random rnd = new Random();
-                string nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
+                nameText = DateTime.Now.ToString("ddMMyyyyhhssmmfff");
                 File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
                 ConnectServer(bufJSON, nameText);
             }
@@ -49,8 +49,7 @@ namespace DashBoardServer
             Message packs = new Message();
             packs = JsonConvert.DeserializeObject<Message>(bufJSON);
             address = packs.args[1].Split(' ')[2];
-            Random rnd = new Random();
-            string nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
+            nameText = DateTime.Now.ToString("ddMMyyyymmhhssfff");
             File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
             ConnectServer(bufJSON, nameText);
         }
@@ -68,27 +67,7 @@ namespace DashBoardServer
 
                 byte[] data = File.ReadAllBytes(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + nameText);
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
-                /*
-                // преобразуем сообщение в массив байтов
-                byte[] data = new byte[] { };
-                data = Encoding.Unicode.GetBytes(json);
 
-                // отправка сообщения
-                stream.Write(data, 0, data.Length);
-
-                // получаем ответ
-                data = new byte[9999999]; // буфер для получаемых данных
-
-                int bytes = 0;
-
-                bytes = stream.Read(data, 0, data.Length);
-                builder.Append(Encoding.Unicode.GetString(data, 0, bytes));
-                response = builder.ToString();
-
-                builder.Clear();
-                stream.Close();
-                client.Close();
-                */
                 int bufferSize = 1024;
                 byte[] dataLength = BitConverter.GetBytes(data.Length);
                 stream.Write(dataLength, 0, 4);
@@ -101,8 +80,7 @@ namespace DashBoardServer
                     bytesSent += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                Random rnd = new Random();
-                nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
+                nameText = DateTime.Now.ToString("ddyyyyMMhhmmssfff");
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
                 string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
@@ -121,7 +99,7 @@ namespace DashBoardServer
                     bytesRead += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
+                nameText = DateTime.Now.ToString("MMddyyyyhhmmssfff");
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
                 param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
