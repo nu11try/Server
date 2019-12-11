@@ -54,14 +54,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="DashBoardServer.exe" size="84448">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="DashBoardServer.exe" size="84992">
       <assemblyIdentity name="DashBoardServer" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>eiMausWtuxQo/64MBG5hIG43v0VKP8m5dmeNEPyjTEA=</dsig:DigestValue>
+        <dsig:DigestValue>bOelZSvOTOLBwL6iOqKU7YsSrsa/4/xZHaperlDbGLI=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -194,13 +194,13 @@
       <dsig:DigestValue>E5YgpdrsFzs9Ck3V3v/sRm6Uxrl8KVns5v77YiPUMus=</dsig:DigestValue>
     </hash>
   </file>
-  <file name="DashBoardSQL.db" size="245760">
+  <file name="DashBoardSQL.db" size="507904">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>SnfVsuoeOphXh5nQ3DfFXeGyf1qdwnPfOy31DFKmFLU=</dsig:DigestValue>
+      <dsig:DigestValue>vbPSEbaZf7s565/axpF6WEj/Ol9Kbe0Chv1fZCY10IA=</dsig:DigestValue>
     </hash>
   </file>
 </asmv1:assembly>

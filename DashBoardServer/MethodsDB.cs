@@ -1221,8 +1221,9 @@ namespace DashBoardServer
         //-------------------------------------------------------------------------------------
         public void updateTestsNow(Message mess)
         {
-            query = "UPDATE testsNow SET `id` = @id, `date` = @date WHERE `ip` = @ip";
+            query = "UPDATE demons SET `service` = @service, `id` = @id, `date` = @date WHERE `ip` = @ip";
             command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[2]);
             command.Parameters.AddWithValue("@ip", mess.args[1]);
             command.Parameters.AddWithValue("@date", mess.args[3]);
@@ -1853,6 +1854,25 @@ namespace DashBoardServer
                 stopPack.Start(s);
             }
             res.Add("OK");
+        }
+        public void GetNowTests(Message mess)
+        {
+            Message message = new Message();
+
+            query = "SELECT * FROM demons WHERE `service` = @service";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read())
+                {
+                        res.Add(SelectResult["ip"].ToString(), SelectResult["id"].ToString(), SelectResult["date"].ToString());
+                }
+
+            }
+            
         }
         public void GetPush(Message mess)
         {

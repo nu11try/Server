@@ -178,3 +178,8 @@ C:\programs\Dash\Server\DashBoardServer\bin\Debug\DashBoardServer.exe.manifest
 C:\programs\Dash\Server\DashBoardServer\bin\Debug\DashBoardServer.application
 C:\programs\Dash\Server\DashBoardServer\obj\Debug\DashBoardServer.exe.manifest
 C:\programs\Dash\Server\DashBoardServer\obj\Debug\DashBoardServer.application
+C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.exe.manifest
+C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\DashBoardSQL.db
+C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\DashBoardServer.exe.manifest
+C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\DashBoardServer.application
+C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.application

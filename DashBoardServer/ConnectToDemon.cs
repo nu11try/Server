@@ -37,7 +37,7 @@ namespace DashBoardServer
             {
                 address = packs.args[i + 3].Split(' ')[2];
                 Random rnd = new Random();
-                string nameText = "\\" + rnd.Next() + ".txt";
+                string nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
                 File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
                 ConnectServer(bufJSON, nameText);
             }
@@ -50,7 +50,7 @@ namespace DashBoardServer
             packs = JsonConvert.DeserializeObject<Message>(bufJSON);
             address = packs.args[1].Split(' ')[2];
             Random rnd = new Random();
-            string nameText = "\\" + rnd.Next() + ".txt";
+            string nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
             File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
             ConnectServer(bufJSON, nameText);
         }
@@ -102,7 +102,7 @@ namespace DashBoardServer
                     bytesLeft -= curDataSize;
                 }
                 Random rnd = new Random();
-                nameText = "\\" + rnd.Next() + ".txt";
+                nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
                 string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
@@ -121,7 +121,7 @@ namespace DashBoardServer
                     bytesRead += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                nameText = "\\" + rnd.Next() + ".txt";
+                nameText = "\\" + rnd.Next() + rnd.Next() + ".txt";
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
                 param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
