@@ -37,7 +37,7 @@ namespace DashBoardServer
             for (int i = 0; i < packs.args.Count - 1; i += 9) // нужно count-1 и i+=9 так как аргументов у набора 9 и в самом конце добавляется еще 1 ("Start") 
             {
                 address = packs.args[i + 3].Split(' ')[2];
-                nameText = DateTime.Now.ToString("ddMMyyyyhhssmmfff");
+                nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhssmmfff");
                 File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
                 ConnectServer(bufJSON, nameText);
             }
@@ -49,7 +49,7 @@ namespace DashBoardServer
             Message packs = new Message();
             packs = JsonConvert.DeserializeObject<Message>(bufJSON);
             address = packs.args[1].Split(' ')[2];
-            nameText = DateTime.Now.ToString("ddMMyyyymmhhssfff");
+            nameText = "\\" + DateTime.Now.ToString("ddMMyyyymmhhssfff");
             File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
             ConnectServer(bufJSON, nameText);
         }
@@ -80,7 +80,7 @@ namespace DashBoardServer
                     bytesSent += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                nameText = DateTime.Now.ToString("ddyyyyMMhhmmssfff");
+                nameText = "\\" + DateTime.Now.ToString("ddyyyyMMhhmmssfff");
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
                 string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
@@ -99,7 +99,7 @@ namespace DashBoardServer
                     bytesRead += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-                nameText = DateTime.Now.ToString("MMddyyyyhhmmssfff");
+                nameText = "\\" + DateTime.Now.ToString("MMddyyyyhhmmssfff");
                 File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
                 param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
