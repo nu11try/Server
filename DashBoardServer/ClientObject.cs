@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.IO;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DashBoardServer
 {
@@ -13,6 +14,7 @@ namespace DashBoardServer
         FreeRAM freeRAM = new FreeRAM();
 
         string nameText = "";
+        string param;
         public ClientObject(TcpClient tcpClient)
         {
             client = tcpClient;
@@ -20,7 +22,7 @@ namespace DashBoardServer
 
         public void Process()
         {
-            NetworkStream stream = null;            
+            NetworkStream stream = null;
             try
             {
                 stream = client.GetStream();
@@ -41,15 +43,37 @@ namespace DashBoardServer
                     bytesLeft -= curDataSize;
                 }
                 nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
-                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);                
-                string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
-                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                while (true)
+                {
+                    try
+                    {
+                        File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
+                        param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
+                        File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                        break;
+                    }
+                    catch
+                    {
+                        Task.Delay(1000);
+                    }
+                }
                 string buf = methodsDB.transformation(param);
 
                 nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmfffss");
-                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, Encoding.UTF8.GetBytes(buf));
-                data = File.ReadAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText);
-                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                while (true)
+                {
+                    try
+                    {
+                        File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, Encoding.UTF8.GetBytes(buf));
+                        data = File.ReadAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                        File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                        break;
+                    }
+                    catch
+                    {
+                        Task.Delay(1000);
+                    }
+                }
                 byte[] dataLengthResponse = BitConverter.GetBytes(data.Length);
                 stream.Write(dataLengthResponse, 0, 4);
                 int bytesSent = 0;
@@ -61,7 +85,7 @@ namespace DashBoardServer
                     bytesSent += curDataSize;
                     bytesLeft -= curDataSize;
                 }
- 
+
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
             }
             catch (Exception ex)
@@ -71,7 +95,7 @@ namespace DashBoardServer
             finally
             {
                 if (stream != null)
-                    stream.Close();                  
+                    stream.Close();
                 if (client != null)
                     client.Close();
 

@@ -20,6 +20,8 @@ namespace DashBoardServer
         string bufJSON;
         string nameText = "";
 
+        byte[] data;
+        string param;
         /// <summary>
         /// Функциия для запуска запроса на коннект к серверу
         /// </summary>
@@ -38,7 +40,18 @@ namespace DashBoardServer
             {
                 address = packs.args[i + 3].Split(' ')[2];
                 nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhssmmfff");
-                File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
+                while (true)
+                {
+                    try
+                    {
+                        File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
+                        break;
+                    }
+                    catch
+                    {
+                        Task.Delay(1000);
+                    }
+                }
                 ConnectServer(bufJSON, nameText);
             }
         }
@@ -50,7 +63,18 @@ namespace DashBoardServer
             packs = JsonConvert.DeserializeObject<Message>(bufJSON);
             address = packs.args[1].Split(' ')[2];
             nameText = "\\" + DateTime.Now.ToString("ddMMyyyymmhhssfff");
-            File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
+            while (true)
+            {
+                try
+                {
+                    File.WriteAllText(AppDomain.CurrentDomain.BaseDirectory + nameText, bufJSON);
+                    break;
+                }
+                catch
+                {
+                    Task.Delay(1000);
+                }
+            }
             ConnectServer(bufJSON, nameText);
         }
 
@@ -64,9 +88,19 @@ namespace DashBoardServer
             {
                 client = new TcpClient(address, port);
                 NetworkStream stream = client.GetStream();
-
-                byte[] data = File.ReadAllBytes(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + nameText);
-                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                while (true)
+                {
+                    try
+                    {
+                        data = File.ReadAllBytes(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + nameText);
+                        File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                        break;
+                    }
+                    catch
+                    {
+                        Task.Delay(1000);
+                    }
+                }
 
                 int bufferSize = 1024;
                 byte[] dataLength = BitConverter.GetBytes(data.Length);
@@ -81,9 +115,20 @@ namespace DashBoardServer
                     bytesLeft -= curDataSize;
                 }
                 nameText = "\\" + DateTime.Now.ToString("ddyyyyMMhhmmssfff");
-                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
-                string param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
-                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                while (true)
+                {
+                    try
+                    {
+                        File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
+                        param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
+                        File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                        break;
+                    }
+                    catch
+                    {
+                        Task.Delay(1000);
+                    }
+                }
                 byte[] fileSizeBytes = new byte[4];
                 int bytes = stream.Read(fileSizeBytes, 0, 4);
                 int dataLengthResponse = BitConverter.ToInt32(fileSizeBytes, 0);
@@ -100,9 +145,20 @@ namespace DashBoardServer
                     bytesLeft -= curDataSize;
                 }
                 nameText = "\\" + DateTime.Now.ToString("MMddyyyyhhmmssfff");
-                File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
-                param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
-                File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                while (true)
+                {
+                    try
+                    {
+                        File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + nameText, data);
+                        param = File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + nameText).Replace("\n", " ");
+                        File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
+                        break;
+                    }
+                    catch
+                    {
+                        Task.Delay(1000);
+                    }
+                }
                 response = param;
             }
             catch (Exception ex)

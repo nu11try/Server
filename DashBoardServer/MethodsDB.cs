@@ -55,28 +55,62 @@ namespace DashBoardServer
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
             {
-                while (SelectResult.Read())
-                {                    
-                    query = "SELECT `full_name` FROM service WHERE `name` = @name";
-                    command = new SQLiteCommand(query, database.connect);
-                    Message serviceName = JsonConvert.DeserializeObject<Message>(SelectResult["projects"].ToString());
-                    foreach (var elService in serviceName.args)
-                    {
-                        command.Parameters.AddWithValue("@name", elService);
-                        database.OpenConnection();
-                        SQLiteDataReader SelectResult1 = command.ExecuteReader();
-                        if (SelectResult1.HasRows)
-                        {
-                            while (SelectResult1.Read())
-                            {
-                                message.Add(SelectResult1["full_name"].ToString());
-                            }
-                        }
-                        SelectResult1.Close();
-                    }
-                    res.Add(Convert.ToBase64String(token), SelectResult["sec_level"].ToString(),
-                        SelectResult["projects"].ToString(), JsonConvert.SerializeObject(message), SelectResult["name"].ToString());
+                res.Add("yes");
+                query = "INSERT INTO authUsers (`ip`,`login`)"
+               + "VALUES (@ip , @login)";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@ip", mess.args[2]);
+                command.Parameters.AddWithValue("@login", mess.args[0]);
+                var InsertTesult = command.ExecuteNonQuery();
+
+
+            }
+            else res.Add("no");
+            SelectResult.Close();
+            database.CloseConnection();
+        }
+        public void getAuth(Message mess)
+        {
+            query = "SELECT * FROM authUsers inner join user on authUsers.login = user.login WHERE `ip` = @ip";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@ip", mess.args[0]);
+
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                SelectResult.Read();
+                res.Add(SelectResult["name"].ToString(), SelectResult["sec_level"].ToString());
+                query = "SELECT * FROM service";
+                command = new SQLiteCommand(query, database.connect);
+                SQLiteDataReader SelectResult1 = command.ExecuteReader();
+                Message args = new Message();
+                Message args1 = new Message();
+
+                while (SelectResult1.Read())
+                {
+                    args.Add(SelectResult1["name"].ToString());
+                    args1.Add(SelectResult1["full_name"].ToString());
                 }
+                if (SelectResult["projects"].ToString() == "{\"args\":[\"all\"]}")
+                {
+                    res.Add(JsonConvert.SerializeObject(args), JsonConvert.SerializeObject(args1));
+                }
+                else
+                {
+                    res.Add(SelectResult["projects"].ToString());
+                    Message args2 = JsonConvert.DeserializeObject<Message>(SelectResult["projects"].ToString());
+                    Message args3 = new Message();
+                    for (int i = 0; i < args.args.Count; i++)
+                    {
+                        if (args2.args.Contains(args.args[i]))
+                        {
+                            args3.Add(args1.args[i]);
+                        }
+                    }
+                    res.Add(JsonConvert.SerializeObject(args3));
+                }
+
             }
             else res.Add("no");
             SelectResult.Close();
