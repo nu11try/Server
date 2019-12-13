@@ -633,9 +633,9 @@ namespace DashBoardServer
 
         }
         public void GetTestResult(Message mess)
-        {            
+        {
             // хз на сколько это правильно, но это блять работает
-            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend ORDER BY number DESC";
+            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and statistic.last = 'last'";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@stend", mess.args[1]);
@@ -645,7 +645,7 @@ namespace DashBoardServer
             {
                 while (SelectResult.Read())
                 {
-                    res.Add( SelectResult["name"].ToString(), SelectResult["result"].ToString(),
+                    res.Add(SelectResult["name"].ToString(), SelectResult["result"].ToString(),
                         SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["version"].ToString());
                     if (SelectResult["author"].ToString() == "")
                     {
@@ -658,7 +658,7 @@ namespace DashBoardServer
                         if (SelectResult1.HasRows)
                         {
                             SelectResult1.Read();
-                                res.Add(SelectResult1["author"].ToString());
+                            res.Add(SelectResult1["author"].ToString());
                         }
                         SelectResult1.Close();
                     }
@@ -668,7 +668,52 @@ namespace DashBoardServer
                     }
                     res.Add(SelectResult["id"].ToString());
                 }
-            }            
+            }
+            else
+            {
+                res.Add("no_result");
+            }
+            SelectResult.Close();
+            database.CloseConnection();
+
+        }
+        public void GetTestResult(Message mess)
+        {
+            // хз на сколько это правильно, но это блять работает
+            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and statistic.last = 'last'";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@stend", mess.args[1]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read())
+                {
+                    res.Add(SelectResult["name"].ToString(), SelectResult["result"].ToString(),
+                        SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["version"].ToString());
+                    if (SelectResult["author"].ToString() == "")
+                    {
+                        query = "SELECT * FROM tests where id = @id and service = @service ";
+                        SQLiteCommand command1 = new SQLiteCommand(query, database.connect);
+                        command1.Parameters.AddWithValue("@service", mess.args[0]);
+                        command1.Parameters.AddWithValue("@id", SelectResult["id"].ToString().Split('(')[0]);
+                        database.OpenConnection();
+                        SQLiteDataReader SelectResult1 = command1.ExecuteReader();
+                        if (SelectResult1.HasRows)
+                        {
+                            SelectResult1.Read();
+                            res.Add(SelectResult1["author"].ToString());
+                        }
+                        SelectResult1.Close();
+                    }
+                    else
+                    {
+                        res.Add(SelectResult["author"].ToString());
+                    }
+                    res.Add(SelectResult["id"].ToString());
+                }
+            }
             else
             {
                 res.Add("no_result");
@@ -1024,8 +1069,18 @@ namespace DashBoardServer
         }
         public void AddStatisticDemon(Message mess)
         {
-            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`)" +
-                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend)";
+
+            query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last'";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@last", "no_last");
+            database.OpenConnection();
+            var UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
+
+            logger.WriteLog("{0} update test", UpdateTest.ToString());
+            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`, `last`)" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend, @last)";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@test", mess.args[2]);
@@ -1038,6 +1093,7 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@date", mess.args[8]);
             command.Parameters.AddWithValue("@version", mess.args[9]);
             command.Parameters.AddWithValue("@stend", mess.args[10]);
+            command.Parameters.AddWithValue("@last", "last");
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
