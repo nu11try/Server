@@ -22,7 +22,7 @@ namespace DashBoardServer
         private static Message res = new Message();
 
         public string transformation(string param)
-        {                      
+        {
             Message mess = JsonConvert.DeserializeObject<Message>(param);
             Type type = typeof(MethodsDB);
             object o = Activator.CreateInstance(type);
@@ -69,7 +69,7 @@ namespace DashBoardServer
             SelectResult.Close();
             database.CloseConnection();
         }
-        public void getAuth(Message mess)
+        public void GetAuth(Message mess)
         {
             query = "SELECT * FROM authUsers inner join user on authUsers.login = user.login WHERE `ip` = @ip";
             command = new SQLiteCommand(query, database.connect);
@@ -88,9 +88,9 @@ namespace DashBoardServer
                 Message args1 = new Message();
 
                 while (SelectResult1.Read())
-                {
+                {                    
                     args.Add(SelectResult1["name"].ToString());
-                    args1.Add(SelectResult1["full_name"].ToString());
+                    args1.Add(SelectResult1["full_name"].ToString());                    
                 }
                 if (SelectResult["projects"].ToString() == "{\"args\":[\"all\"]}")
                 {
@@ -114,6 +114,15 @@ namespace DashBoardServer
             }
             else res.Add("no");
             SelectResult.Close();
+            database.CloseConnection();
+        }        
+        public void ExitAuth(Message mess)
+        {
+            query = "DELETE FROM authUsers WHERE `ip`= @ip";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@ip", mess.args[0]);            
+            database.OpenConnection();
+            res.Add(command.ExecuteNonQuery().ToString());
             database.CloseConnection();
         }
         //-------------------------------------------------------------------------------------
@@ -446,7 +455,7 @@ namespace DashBoardServer
                 }
                 SelectResult.Close();
                 database.CloseConnection();
-                
+
 
                 query = "SELECT * FROM statistic WHERE `service` = @service AND `id` = @id";
                 string result = "";
@@ -471,9 +480,9 @@ namespace DashBoardServer
                 }
                 SelectResult.Close();
                 database.CloseConnection();
-                
+
             }
-            
+
         }
         /// <summary>
         /// Функция получения дополнительных параметров о тесте
@@ -564,7 +573,7 @@ namespace DashBoardServer
             if (SelectResult.HasRows)
             {
                 while (SelectResult.Read())
-                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(),SelectResult["data"].ToString(), SelectResult["executor"].ToString(), SelectResult["status"].ToString());
+                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(), SelectResult["data"].ToString(), SelectResult["executor"].ToString(), SelectResult["status"].ToString());
             }
             SelectResult.Close();
             database.CloseConnection();
@@ -582,9 +591,9 @@ namespace DashBoardServer
                 while (SelectResult.Read())
                 {
                     var issues = from i in jira.Issues.Queryable
-                            where i.Key == SelectResult["link"].ToString()
-                            select i;
-                    
+                                 where i.Key == SelectResult["link"].ToString()
+                                 select i;
+
                     query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
                                    "WHERE `link` = @link";
                     command = new SQLiteCommand(query, database.connect);
@@ -632,50 +641,21 @@ namespace DashBoardServer
             database.CloseConnection();
 
         }
-        public void GetTestResult(Message mess)
+        public void GetPathToResult(Message mess)
         {
-            // хз на сколько это правильно, но это блять работает
-            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and statistic.last = 'last'";
+            query = "SELECT `path` FROM service WHERE `name` = @name";
             command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@stend", mess.args[1]);
+            command.Parameters.AddWithValue("@name", mess.args[0]);
             database.OpenConnection();
             SQLiteDataReader SelectResult = command.ExecuteReader();
             if (SelectResult.HasRows)
             {
-                while (SelectResult.Read())
-                {
-                    res.Add(SelectResult["name"].ToString(), SelectResult["result"].ToString(),
-                        SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["version"].ToString());
-                    if (SelectResult["author"].ToString() == "")
-                    {
-                        query = "SELECT * FROM tests where id = @id and service = @service ";
-                        SQLiteCommand command1 = new SQLiteCommand(query, database.connect);
-                        command1.Parameters.AddWithValue("@service", mess.args[0]);
-                        command1.Parameters.AddWithValue("@id", SelectResult["id"].ToString().Split('(')[0]);
-                        database.OpenConnection();
-                        SQLiteDataReader SelectResult1 = command1.ExecuteReader();
-                        if (SelectResult1.HasRows)
-                        {
-                            SelectResult1.Read();
-                            res.Add(SelectResult1["author"].ToString());
-                        }
-                        SelectResult1.Close();
-                    }
-                    else
-                    {
-                        res.Add(SelectResult["author"].ToString());
-                    }
-                    res.Add(SelectResult["id"].ToString());
-                }
+                SelectResult.Read();
+                res.Add(SelectResult["path"].ToString());
             }
-            else
-            {
-                res.Add("no_result");
-            }
+            else res.Add("no");
             SelectResult.Close();
             database.CloseConnection();
-
         }
         public void GetTestResult(Message mess)
         {
@@ -735,7 +715,7 @@ namespace DashBoardServer
             {
                 while (SelectResult.Read())
                 {
-                    res.Add(SelectResult["result"].ToString());     
+                    res.Add(SelectResult["result"].ToString());
                 }
             }
         }
@@ -756,7 +736,7 @@ namespace DashBoardServer
             {
                 while (SelectResult.Read())
                 {
-                    res.Add(SelectResult["date"].ToString(), SelectResult["result"].ToString(), 
+                    res.Add(SelectResult["date"].ToString(), SelectResult["result"].ToString(),
                         SelectResult["version"].ToString(), SelectResult["time_end"].ToString(), SelectResult["id"].ToString(), SelectResult["version"].ToString());
                 }
             }
@@ -871,7 +851,8 @@ namespace DashBoardServer
                 while (SelectResult.Read())
                 {
                     Message tests = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
-                    if (tests.args.Contains(mess.args[3]) || mess.args[3].Equals("")) {
+                    if (tests.args.Contains(mess.args[3]) || mess.args[3].Equals(""))
+                    {
                         string query1 = "SELECT * FROM doc WHERE `service` = @service AND `id` = @id";
                         SQLiteCommand command1 = new SQLiteCommand(query1, database.connect);
                         command1.Parameters.AddWithValue("@service", mess.args[0]);
@@ -884,7 +865,7 @@ namespace DashBoardServer
                 }
             }
             SelectResult.Close();
-            
+
             if (res.args.Count == 0) res.Add("error");
             database.CloseConnection();
         }
@@ -1179,7 +1160,7 @@ namespace DashBoardServer
             logger.WriteLog(InsertTesult.ToString() + " create kp");
 
             res.Add("OK");
-        }      
+        }
         public void AddAutostart(Message mess)
         {
             query = "INSERT INTO autostart (`id`, `name`, `days`, `service`, `time`, `packs`, `type`)"
@@ -1214,12 +1195,12 @@ namespace DashBoardServer
                     Tests test = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
                     if (test.id.Contains(mess.args[1]))
                     {
-                        for(int i =0; i < test.id.Count; i++)
+                        for (int i = 0; i < test.id.Count; i++)
                         {
                             Message message = JsonConvert.DeserializeObject<Message>(test.dependon[i]);
                             if (message.args.Contains(mess.args[1]))
                             {
-                                if(!tests.Contains(test.id[i]))
+                                if (!tests.Contains(test.id[i]))
                                     tests.Add(test.id[i]);
                             }
                             if (test.duplicate.Equals(mess.args[1]))
@@ -1355,7 +1336,7 @@ namespace DashBoardServer
             Message tests = new Message();
             Message addTests = new Message();
             int step = 0;
-            int addStep  = 0;
+            int addStep = 0;
             string id = "";
             int i = 0;
             if (SelectResult.HasRows)
@@ -1572,10 +1553,10 @@ namespace DashBoardServer
             List<string> packs = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
             command = new SQLiteCommand(query, database.connect);
-            if(mess.args[1] == "no_pack")
+            if (mess.args[1] == "no_pack")
             {
                 mess.args.RemoveAt(1);
-                for(int i = 2; i < mess.args.Count; i++)
+                for (int i = 2; i < mess.args.Count; i++)
                 {
                     tests1.id.Add(mess.args[i]);
                     mess.args.RemoveAt(i);
@@ -1615,20 +1596,20 @@ namespace DashBoardServer
                     command.Parameters.AddWithValue("@id_pack", mess.args[i]);
                     database.OpenConnection();
                     SelectResult = command.ExecuteReader();
-                   
+
                     if (SelectResult.HasRows)
                     {
                         while (SelectResult.Read())
                         {
                             packs.Add(SelectResult["id"].ToString());
                             tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
-                            for(int j = 0; j < tests1.id.Count; j++)
+                            for (int j = 0; j < tests1.id.Count; j++)
                             {
                                 int q = tests.id.IndexOf(tests1.id[j]);
                                 if (tests.id.Contains(tests1.id[j]))
                                 {
                                     tests1.id[j] = tests.id[q];
-                                    if(j==0)
+                                    if (j == 0)
                                         tests1.start.Add("Первый");
                                     else
                                         tests1.start.Add(tests1.id[j - 1]);
@@ -1659,8 +1640,8 @@ namespace DashBoardServer
                                 SelectResult1.Close();
                                 //database1.CloseConnection();
                             }
-                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), JsonConvert.SerializeObject(tests),  SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString(), SelectResult["stend"].ToString());
-                           
+                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), JsonConvert.SerializeObject(tests), SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString(), SelectResult["stend"].ToString());
+
                         }
                     }
                     SelectResult.Close();
@@ -1680,7 +1661,7 @@ namespace DashBoardServer
                 Thread startPack = new Thread(new ParameterizedThreadStart(startTests.Event));
                 startPack.Start(request);
                 res.Add("OK");
-               
+
             }
             else res.Add("ERROR");
         }
@@ -1750,7 +1731,7 @@ namespace DashBoardServer
         public void UpdateDuplicate(Message mess)
         {
             Tests tests = new Tests();
-            if(mess.args[3] == "add")
+            if (mess.args[3] == "add")
             {
                 query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
                 command = new SQLiteCommand(query, database.connect);
@@ -1829,13 +1810,13 @@ namespace DashBoardServer
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@tests",JsonConvert.SerializeObject(tests));
+            command.Parameters.AddWithValue("@tests", JsonConvert.SerializeObject(tests));
             database.OpenConnection();
             var InsertTesult = command.ExecuteNonQuery();
             database.CloseConnection();
             logger.WriteLog(InsertTesult.ToString() + " update testsInPack");
             res.Add("OK");
-            
+
         }
         public void UpdateAutostart(Message mess)
         {
@@ -1958,11 +1939,11 @@ namespace DashBoardServer
             {
                 while (SelectResult.Read())
                 {
-                        res.Add(SelectResult["ip"].ToString(), SelectResult["id"].ToString(), SelectResult["date"].ToString());
+                    res.Add(SelectResult["ip"].ToString(), SelectResult["id"].ToString(), SelectResult["date"].ToString());
                 }
 
             }
-            
+
         }
         public void GetPush(Message mess)
         {
@@ -2048,7 +2029,7 @@ namespace DashBoardServer
                         index++;
                         comments.step.Add(index.ToString());
                         comments.comment.Add("Отсутствуют комментарии к шагу");
-                        
+
                     }
                     i = true;
                 }
@@ -2064,7 +2045,7 @@ namespace DashBoardServer
                         index++;
                         comments.step.Add(index.ToString());
                         comments.comment.Add(el);
-                        
+
                     }
                     else
                     {
@@ -2107,7 +2088,7 @@ namespace DashBoardServer
         public List<string> browser { get; set; }
         public List<string> duplicate { get; set; }
 
-        public void Remove(int i )
+        public void Remove(int i)
         {
             id.RemoveAt(i);
             start.RemoveAt(i);

@@ -17,8 +17,8 @@ namespace DashBoardServer
         const int port = 8888;
         //const string ip = "172.31.197.89";
         //const string ip = "172.17.42.40";
-        const string ip = "172.31.197.232";
-        //const string ip = "127.0.0.1";
+        //const string ip = "172.31.197.232";
+        const string ip = "127.0.0.1";
         static TcpListener listener;
 
         static class Data
