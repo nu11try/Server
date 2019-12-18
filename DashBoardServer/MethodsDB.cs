@@ -531,116 +531,6 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <returns></returns>
         /// 
-        public void GetErrors(Message mess)
-        {
-            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648W");
-            query = "SELECT * FROM jira where `test` = @test ";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
-            {
-                while (SelectResult.Read())
-                {
-                    var issues = from i in jira.Issues.Queryable
-                                 where i.Key == SelectResult["link"].ToString()
-                                 select i;
-
-                    query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
-                                   "WHERE `link` = @link";
-                    command = new SQLiteCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@link", SelectResult["link"].ToString());
-                    command.Parameters.AddWithValue("@status", issues.First().Status.Name);
-                    command.Parameters.AddWithValue("@name", issues.First().Summary);
-                    command.Parameters.AddWithValue("@type", issues.First().Type.Name);
-                    command.Parameters.AddWithValue("@executor", issues.First().Reporter);
-                    command.Parameters.AddWithValue("@data", issues.First().Created.Value.ToString());
-                    database.OpenConnection();
-                    var UpdateTest = command.ExecuteNonQuery();
-                }
-            }
-
-            SelectResult.Close();
-            database.CloseConnection();
-
-
-            query = "SELECT * FROM jira where `test` = @test ";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            database.OpenConnection();
-            SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
-            {
-                while (SelectResult.Read())
-                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(), SelectResult["data"].ToString(), SelectResult["executor"].ToString(), SelectResult["status"].ToString());
-            }
-            SelectResult.Close();
-            database.CloseConnection();
-        }
-        public void CheckErrors(Message mess)
-        {
-            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648W");
-            query = "SELECT * FROM jira where `test` = @test ";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
-            {
-                while (SelectResult.Read())
-                {
-                    var issues = from i in jira.Issues.Queryable
-                                 where i.Key == SelectResult["link"].ToString()
-                                 select i;
-
-                    query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
-                                   "WHERE `link` = @link";
-                    command = new SQLiteCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@link", SelectResult["link"].ToString());
-                    command.Parameters.AddWithValue("@status", issues.First().Status.Name);
-                    command.Parameters.AddWithValue("@name", issues.First().Summary);
-                    command.Parameters.AddWithValue("@type", issues.First().Type.Name);
-                    command.Parameters.AddWithValue("@executor", issues.First().Reporter);
-                    command.Parameters.AddWithValue("@data", issues.First().Created.Value.ToString());
-                    database.OpenConnection();
-                    var UpdateTest = command.ExecuteNonQuery();
-                }
-            }
-
-            SelectResult.Close();
-            database.CloseConnection();
-            query = "SELECT * FROM jira where `test` = @test and (`type` = 'Ошибка' or `type` = 'Доработка' or `type` = 'Компонентная доработка') and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            database.OpenConnection();
-            SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
-            {
-                res.Add("errors");
-            }
-            else
-            {
-                SelectResult.Close();
-                database.CloseConnection();
-                query = "SELECT * FROM jira where `test` = @test and `type` = 'Задача' and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
-                command = new SQLiteCommand(query, database.connect);
-                command.Parameters.AddWithValue("@test", mess.args[1]);
-                database.OpenConnection();
-                SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
-                {
-                    res.Add("issue");
-                }
-                else
-                {
-                    res.Add("no issue");
-                }
-            }
-            SelectResult.Close();
-            database.CloseConnection();
-
-        }
         public void GetPathToResult(Message mess)
         {
             query = "SELECT `path` FROM service WHERE `name` = @name";
@@ -949,6 +839,160 @@ namespace DashBoardServer
             SelectResult.Close();
             database.CloseConnection();
         }
+        public void GetCharts(Message mess)
+        {
+            DateTime start;
+            if (mess.args[1] == "")
+                start = Convert.ToDateTime("09 декабря 2010");
+            else
+                start = Convert.ToDateTime(mess.args[1]);
+            DateTime end;
+            if (mess.args[2] == "")
+                end = Convert.ToDateTime("01 декабря 2100");
+            else
+                end = Convert.ToDateTime(mess.args[2]);
+            end = end.AddDays(1);
+            for (int i = 4; i < mess.args.Count; i++)
+            {
+                Message message = new Message();
+                query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service and tests.service = @service AND statistic.stend = @stend and statistic.result = 'Passed'";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[i]);
+                command.Parameters.AddWithValue("@stend", mess.args[3]);
+                database.OpenConnection();
+                SQLiteDataReader SelectResult = command.ExecuteReader();
+                if (SelectResult.HasRows)
+                {
+                    while (SelectResult.Read())
+                    {
+                        if (start <= Convert.ToDateTime(SelectResult["date"].ToString().Split('|')[0] + SelectResult["date"].ToString().Split('|')[1]) && end >= Convert.ToDateTime(SelectResult["date"].ToString().Split('|')[0] + SelectResult["date"].ToString().Split('|')[1]))
+                        {
+                            message = new Message();
+                            message.Add(SelectResult["name"].ToString(), SelectResult["time_end"].ToString(),
+                             SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["date"].ToString());
+                            if (SelectResult["author"].ToString() == "")
+                            {
+                                query = "SELECT * FROM tests where id = @id and service = @service ";
+                                SQLiteCommand command1 = new SQLiteCommand(query, database.connect);
+                                command1.Parameters.AddWithValue("@service", mess.args[0]);
+                                command1.Parameters.AddWithValue("@id", SelectResult["id"].ToString().Split('(')[0]);
+                                database.OpenConnection();
+                                SQLiteDataReader SelectResult1 = command1.ExecuteReader();
+                                if (SelectResult1.HasRows)
+                                {
+                                    SelectResult1.Read();
+                                    message.Add(SelectResult1["author"].ToString());
+                                }
+                                SelectResult1.Close();
+                            }
+                            else
+                            {
+                                message.Add(SelectResult["author"].ToString());
+                            }
+                            message.Add(SelectResult["id"].ToString());
+                            res.Add(JsonConvert.SerializeObject(message));
+                        }
+                    }
+                }
+
+            }
+        }
+        public void GetErrors(Message mess)
+        {
+            query = "SELECT * FROM jira where `test` = @test";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", mess.args[1]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read())
+                {
+                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(), SelectResult["data"].ToString(), SelectResult["status"].ToString(), SelectResult["executor"].ToString());
+                }
+            }
+
+            SelectResult.Close();
+            database.CloseConnection();
+
+
+            query = "SELECT * FROM jira where `test` = @test ";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", mess.args[1]);
+            database.OpenConnection();
+            SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read())
+                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(), SelectResult["data"].ToString(), SelectResult["executor"].ToString(), SelectResult["status"].ToString());
+            }
+            SelectResult.Close();
+            database.CloseConnection();
+        }
+        public void GetErrorsStatus(Message mess)
+        {
+            query = "SELECT * FROM jira where `test` = @test and (`type` = 'Ошибка' or `type` = 'Доработка' or `type` = 'Компонентная доработка') and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", mess.args[1]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                res.Add("errors");
+            }
+            else
+            {
+                SelectResult.Close();
+                database.CloseConnection();
+                query = "SELECT * FROM jira where `test` = @test and `type` = 'Задача' and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
+                command = new SQLiteCommand(query, database.connect);
+                command.Parameters.AddWithValue("@test", mess.args[1]);
+                database.OpenConnection();
+                SelectResult = command.ExecuteReader();
+                if (SelectResult.HasRows)
+                {
+                    res.Add("issue");
+                }
+                else
+                {
+                    res.Add("no issue");
+                }
+            }
+            SelectResult.Close();
+            database.CloseConnection();
+        }
+        public void CheckErrors(Message mess)
+        {
+            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648W");
+            query = "SELECT link FROM jira ";
+            command = new SQLiteCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", mess.args[1]);
+            database.OpenConnection();
+            SQLiteDataReader SelectResult = command.ExecuteReader();
+            if (SelectResult.HasRows)
+            {
+                while (SelectResult.Read())
+                {
+                    var issues = from i in jira.Issues.Queryable
+                                 where i.Key == SelectResult["link"].ToString()
+                                 select i;
+
+                    query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
+                                   "WHERE `link` = @link";
+                    command = new SQLiteCommand(query, database.connect);
+                    command.Parameters.AddWithValue("@link", SelectResult["link"].ToString());
+                    command.Parameters.AddWithValue("@status", issues.First().Status.Name);
+                    command.Parameters.AddWithValue("@name", issues.First().Summary);
+                    command.Parameters.AddWithValue("@type", issues.First().Type.Name);
+                    command.Parameters.AddWithValue("@executor", issues.First().Assignee);
+                    command.Parameters.AddWithValue("@data", issues.First().Created.Value.ToString());
+                    database.OpenConnection();
+                    var UpdateTest = command.ExecuteNonQuery();
+                }
+            }
+            SelectResult.Close();
+            database.CloseConnection();
+        }
         //-------------------------------------------------------------------------------------
         // ФУНКЦИИ ДОБАВЛЕНИЯ
         //-------------------------------------------------------------------------------------
@@ -969,25 +1013,25 @@ namespace DashBoardServer
             comments.step.RemoveAt(0);
             comments.step.RemoveAt(0);
             string commS = JsonConvert.SerializeObject(comments);
-            query = "UPDATE tests SET `name` = @name,`service` = @service, `status` = @status, " +
+            query = "UPDATE tests SET `name` = @name, `status` = @status, " +
                 "`author` = @author, `comments` = @comments,`statistic` = @statistic ,`used` = @used " +
-                "WHERE `id` = @id and `status` = @earlyStatus";
+                "WHERE `id` = @id AND `status` = @earlyStatus AND `service` = @service";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@name", name);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@status", "add");
             command.Parameters.AddWithValue("@author", mess.args[2]);
             command.Parameters.AddWithValue("@comments", commS);
             command.Parameters.AddWithValue("@statistic", mess.args[3]);
             command.Parameters.AddWithValue("@used", "no");
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@earlyStatus", "no_add");
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
 
 
-            query = "SELECT * FROM kp WHERE `service` = @service";
+            query = "SELECT `id`, `test`, `steps` FROM kp WHERE `service` = @service";
             command = new SQLiteCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
@@ -998,7 +1042,7 @@ namespace DashBoardServer
             {
                 while (SelectResult.Read())
                 {
-                    if (SelectResult["id"].ToString().Equals(mess.args[4]))
+                    if (SelectResult["id"].ToString().Equals(mess.args[4].Trim(' ')))
                     {
                         tests = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
                         step = Int32.Parse(SelectResult["steps"].ToString());
@@ -1146,8 +1190,8 @@ namespace DashBoardServer
                 ", `service`,`test`)"
                 + "VALUES (@id, @name, @steps, @author, @date, @id_doc, @service, @test)";
             command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[1]);
-            command.Parameters.AddWithValue("@name", mess.args[1]);
+            command.Parameters.AddWithValue("@id", mess.args[1].Trim(' '));
+            command.Parameters.AddWithValue("@name", mess.args[1].Trim(' '));
             command.Parameters.AddWithValue("@steps", mess.args[5]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@author", mess.args[3]);
