@@ -54,7 +54,7 @@ namespace DashBoardServer
                     }
                     catch
                     {
-                        Task.Delay(1000);
+                        nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
                 string buf = methodsDB.transformation(param);
@@ -71,7 +71,7 @@ namespace DashBoardServer
                     }
                     catch
                     {
-                        Task.Delay(1000);
+                        nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
                 byte[] dataLengthResponse = BitConverter.GetBytes(data.Length);

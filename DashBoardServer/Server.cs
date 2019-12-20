@@ -17,8 +17,10 @@ namespace DashBoardServer
         const int port = 8888;
         //const string ip = "172.31.197.89";
         //const string ip = "172.17.42.40";
-        const string ip = "172.31.197.232";
-        //const string ip = "127.0.0.1";
+        //const string ip = "172.31.197.232";
+       // const string ip = "172.17.42.32";
+        const string ip = "127.0.0.1";
+       // const string ip = "172.31.191.200";
         static TcpListener listener;
 
         static class Data
@@ -27,7 +29,7 @@ namespace DashBoardServer
         }
 
         static void Main(string[] args)
-        {           
+        {
             try
             {
                 listener = new TcpListener(IPAddress.Parse(ip), port);
@@ -39,10 +41,10 @@ namespace DashBoardServer
                 Console.WriteLine("==================================");
 
                 try
-                {                    
+                {
                     Autostart autostart = new Autostart();
                     Thread autoStartThread = new Thread(new ParameterizedThreadStart(autostart.Init));
-                    autoStartThread.Start();                    
+                    autoStartThread.Start();
                 }
                 catch (Exception ex)
                 {
@@ -51,7 +53,7 @@ namespace DashBoardServer
 
                 while (true)
                 {
-                    TcpClient client = listener.AcceptTcpClient();                    
+                    TcpClient client = listener.AcceptTcpClient();
                     ClientObject clientObject = new ClientObject(client);
 
                     //создаем новый поток для обслуживания нового клиента
@@ -61,7 +63,7 @@ namespace DashBoardServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine("sdfsf = " + ex.Message);
+                Console.WriteLine(ex.Message);
             }
             finally
             {

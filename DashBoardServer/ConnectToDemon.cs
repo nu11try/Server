@@ -49,7 +49,7 @@ namespace DashBoardServer
                     }
                     catch
                     {
-                        Task.Delay(1000);
+                        nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
                 ConnectServer(bufJSON, nameText);
@@ -72,7 +72,7 @@ namespace DashBoardServer
                 }
                 catch
                 {
-                    Task.Delay(1000);
+                    nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                 }
             }
             ConnectServer(bufJSON, nameText);
@@ -98,7 +98,7 @@ namespace DashBoardServer
                     }
                     catch
                     {
-                        Task.Delay(1000);
+                        nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
 
@@ -126,7 +126,7 @@ namespace DashBoardServer
                     }
                     catch
                     {
-                        Task.Delay(1000);
+                        nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
                 byte[] fileSizeBytes = new byte[4];
@@ -156,7 +156,7 @@ namespace DashBoardServer
                     }
                     catch
                     {
-                        Task.Delay(1000);
+                        nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
                 response = param;

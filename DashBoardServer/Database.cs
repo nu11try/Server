@@ -11,6 +11,8 @@ namespace DashBoardServer
         public Database()
         {
             connect = new SQLiteConnection("Data Source=" + Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + "\\DashBoardSQL.db");
+            //System.Console.WriteLine();
+            //connect = new SQLiteConnection("Data Source=" + "\\\\172.17.42.31\\DashBoardSQL.db");
         }
 
         public void OpenConnection()
