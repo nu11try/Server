@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
@@ -12,8 +13,9 @@ namespace DashBoardServer
     class Autostart
     {
         private Database database = new Database();
-        private SQLiteCommand command;
-        private SQLiteDataReader SelectResult;
+        private MySqlCommand command;
+        private MySqlDataReader reader;
+        private MySqlDataReader reader1;
         private Logger logger = new Logger();
         private string query = "";
         List<OptionsAutostart> options = new List<OptionsAutostart>();
@@ -40,26 +42,26 @@ namespace DashBoardServer
         {
             options = new List<OptionsAutostart>();
             query = "SELECT * FROM autostart";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             database.OpenConnection();
-            SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
                     OptionsAutostart autostart = new OptionsAutostart();
                     
-                    autostart.id = SelectResult["id"].ToString();
-                    autostart.pack = SelectResult["Packs"].ToString();
-                    autostart.time = SelectResult["Time"].ToString();
-                    autostart.days = SelectResult["Days"].ToString();
-                    autostart.service = SelectResult["Service"].ToString();
-                    autostart.type = SelectResult["Type"].ToString();
-                    autostart.status = SelectResult["status"].ToString();
+                    autostart.id = reader["id"].ToString();
+                    autostart.pack = reader["Packs"].ToString();
+                    autostart.time = reader["Time"].ToString();
+                    autostart.days = reader["Days"].ToString();
+                    autostart.service = reader["Service"].ToString();
+                    autostart.type = reader["Type"].ToString();
+                    autostart.status = reader["status"].ToString();
                     options.Add(autostart);
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
             DateTime date = DateTime.Now;
@@ -89,7 +91,7 @@ namespace DashBoardServer
             mess.args.Insert(0,autostart.service);
 
             query = "UPDATE autostart SET `status` = 'start' WHERE `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", autostart.id);
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();

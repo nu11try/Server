@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
@@ -26,9 +27,10 @@ namespace DashBoardServer
     public class FileSystem
     {
         private Database database = new Database();
-        private SQLiteCommand command;
+        private MySqlCommand command;
         private string query = "";
         private Logger logger = new Logger();
+        private MySqlDataReader reader;
 
         Dictionary<string, string> elementXML = new Dictionary<string, string>();
         XmlNode attr;
@@ -170,7 +172,7 @@ namespace DashBoardServer
            
             query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
-            command = new SQLiteCommand(query, database.connect);        
+            command = new MySqlCommand(query, database.connect);        
             command.Parameters.AddWithValue("@id", nameTest);
             command.Parameters.AddWithValue("@test", nameTest);
             command.Parameters.AddWithValue("@service", service);
@@ -194,7 +196,7 @@ namespace DashBoardServer
             {
                 query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
 
                 command.Parameters.AddWithValue("@id", nameTest);
                 command.Parameters.AddWithValue("@test", nameTest);
@@ -217,7 +219,7 @@ namespace DashBoardServer
              {
                 query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 
                 command.Parameters.AddWithValue("@id", nameTest);
                 command.Parameters.AddWithValue("@test", nameTest);
@@ -240,23 +242,23 @@ namespace DashBoardServer
                 if (version == "no_version")
                 {
                     query = "SELECT * FROM stends WHERE `service` = @service";
-                    command = new SQLiteCommand(query, database.connect);
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@service", service);
                     database.OpenConnection();
-                    SQLiteDataReader SelectResult = command.ExecuteReader();
-                    if (SelectResult.HasRows)
+                    reader = command.ExecuteReader();
+                    if (reader.HasRows)
                     {
-                        while (SelectResult.Read())
+                        while (reader.Read())
                         {
-                            version = SelectResult["version"].ToString();
+                            version = reader["version"].ToString();
                         }
                     }
-                    SelectResult.Close();
+                    reader.Close();
                     database.CloseConnection();
                 }
                 query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version)";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", nameTest);
                 command.Parameters.AddWithValue("@test", nameTest);
                 command.Parameters.AddWithValue("@service", service);

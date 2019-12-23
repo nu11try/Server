@@ -183,3 +183,10 @@ C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\DashBoardSQL.db
 C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\DashBoardServer.exe.manifest
 C:\Users\User\Desktop\Server\DashBoardServer\bin\Debug\DashBoardServer.application
 C:\Users\User\Desktop\Server\DashBoardServer\obj\Debug\DashBoardServer.application
+E:\GitHub\Server\DashBoardServer\bin\Debug\BouncyCastle.Crypto.dll
+E:\GitHub\Server\DashBoardServer\bin\Debug\Google.Protobuf.dll
+E:\GitHub\Server\DashBoardServer\bin\Debug\MySql.Data.dll
+E:\GitHub\Server\DashBoardServer\bin\Debug\Renci.SshNet.dll
+E:\GitHub\Server\DashBoardServer\bin\Debug\Google.Protobuf.xml
+E:\GitHub\Server\DashBoardServer\bin\Debug\MySql.Data.xml
+E:\GitHub\Server\DashBoardServer\bin\Debug\Renci.SshNet.xml

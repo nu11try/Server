@@ -1,28 +1,50 @@
 ﻿using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
+using MySql.Data.MySqlClient;
 
 namespace DashBoardServer
 {
     class Database
     {
-        public SQLiteConnection connect;
-
+        public MySqlConnection connect;
         public Database()
         {
-            connect = new SQLiteConnection("Data Source=" + Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + "\\DashBoardSQL.db");
-            //System.Console.WriteLine();
-            //connect = new SQLiteConnection("Data Source=" + "\\\\172.17.42.31\\DashBoardSQL.db");
+            string server = "localhost";
+            string user = "root";
+            string dbName = "dashboard";
+            string port = "3306";
+            string password = "root";
+            string connStr = "server=" + server + ";user=" + user +
+                ";database=" + dbName +
+                ";port=" + port +
+                ";password=" + password + ";";
+
+            connect = new MySqlConnection(connStr);            
         }
 
         public void OpenConnection()
         {
-            if (connect.State != System.Data.ConnectionState.Open) connect.Open();
+            if (!connect.State.Equals("Open"))
+            {
+                try
+                {
+                    connect.Open();
+                }
+                catch { }
+            }
         }
 
         public void CloseConnection()
         {
-            if (connect.State != System.Data.ConnectionState.Closed) connect.Close();
+            if (!connect.State.Equals("Open"))
+            {
+                try
+                {
+                    connect.Close();
+                }
+                catch { }
+            }
         }
     }
 }

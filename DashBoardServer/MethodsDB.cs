@@ -10,23 +10,28 @@ using System.Threading.Tasks;
 using System.Reflection;
 using System.Net;
 using Atlassian.Jira;
+using MySql.Data.MySqlClient;
 
 namespace DashBoardServer
 {
     class MethodsDB
     {
         private Database database = new Database();
-        private SQLiteCommand command;
+        private MySqlCommand command;
         private Logger logger = new Logger();
         private string query = "";
         private static Message res = new Message();
+
+        private MySqlDataReader reader;
+        private MySqlDataReader reader1;
 
         public string transformation(string param)
         {
             Message mess = JsonConvert.DeserializeObject<Message>(param);
             Type type = typeof(MethodsDB);
             object o = Activator.CreateInstance(type);
-            MethodInfo info = type.GetMethod(mess.args[0]);
+            MethodInfo info = type.GetMethod(mess.args[0].Trim());
+            string nameFun = mess.args[0];
             mess.args.RemoveAt(0);
             if (!mess.args[1].Equals(""))
             {
@@ -48,58 +53,60 @@ namespace DashBoardServer
             var token = Encoding.UTF8.GetBytes(login + password);
 
             query = "SELECT * FROM user WHERE `login` = @login AND `password` = @password";
-            command = new SQLiteCommand(query, database.connect);
+
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@login", login);
             command.Parameters.AddWithValue("@password", password);
+
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            MySqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
             {
                 res.Add("yes");
-                query = "INSERT INTO authUsers (`ip`,`login`)"
-               + "VALUES (@ip , @login)";
-                command = new SQLiteCommand(query, database.connect);
+
+                query = "INSERT INTO auth_users (`ip`,`login`)" + "VALUES (@ip , @login)";
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@ip", mess.args[2]);
                 command.Parameters.AddWithValue("@login", mess.args[0]);
                 var InsertTesult = command.ExecuteNonQuery();
-
-
             }
-            else res.Add("no");
-            SelectResult.Close();
+            if (res.args.Count == 0) res.Add("no");
+            reader.Close();
             database.CloseConnection();
         }
         public void GetAuth(Message mess)
-        {
-            query = "SELECT * FROM authUsers inner join user on authUsers.login = user.login WHERE `ip` = @ip";
-            command = new SQLiteCommand(query, database.connect);
+        { 
+            query = "SELECT * FROM auth_users inner join user on auth_users.login = user.login WHERE `ip` = @ip";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@ip", mess.args[0]);
 
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                SelectResult.Read();
-                res.Add(SelectResult["name"].ToString(), SelectResult["sec_level"].ToString());
+                reader.Read();
+                res.Add(reader["name"].ToString(), reader["sec_level"].ToString());
+                string project = reader["projects"].ToString();
+                reader.Close();
                 query = "SELECT * FROM service order by full_name";
-                command = new SQLiteCommand(query, database.connect);
-                SQLiteDataReader SelectResult1 = command.ExecuteReader();
+                command = new MySqlCommand(query, database.connect);
+                reader1 = command.ExecuteReader();
                 Message args = new Message();
                 Message args1 = new Message();
 
-                while (SelectResult1.Read())
+                while (reader1.Read())
                 {
-                    args.Add(SelectResult1["name"].ToString());
-                    args1.Add(SelectResult1["full_name"].ToString());
+                    args.Add(reader1["name"].ToString());
+                    args1.Add(reader1["full_name"].ToString());
                 }
-                if (SelectResult["projects"].ToString() == "{\"args\":[\"all\"]}")
+                if (project == "{\"args\":[\"all\"]}")
                 {
                     res.Add(JsonConvert.SerializeObject(args), JsonConvert.SerializeObject(args1));
                 }
                 else
                 {
-                    res.Add(SelectResult["projects"].ToString());
-                    Message args2 = JsonConvert.DeserializeObject<Message>(SelectResult["projects"].ToString());
+                    res.Add(project);
+                    Message args2 = JsonConvert.DeserializeObject<Message>(project);
                     Message args3 = new Message();
                     for (int i = 0; i < args.args.Count; i++)
                     {
@@ -113,13 +120,13 @@ namespace DashBoardServer
 
             }
             else res.Add("no");
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void ExitAuth(Message mess)
         {
-            query = "DELETE FROM authUsers WHERE `ip`= @ip";
-            command = new SQLiteCommand(query, database.connect);
+            query = "DELETE FROM auth_users WHERE `ip`= @ip";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@ip", mess.args[0]);
             database.OpenConnection();
             res.Add(command.ExecuteNonQuery().ToString());
@@ -136,62 +143,62 @@ namespace DashBoardServer
         private string GetPathService(Message mess)
         {
             query = "SELECT path FROM service WHERE `name` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
             string result = "";
 
-            if (SelectResult.HasRows) while (SelectResult.Read()) result = SelectResult["path"].ToString();
+            if (reader.HasRows) while (reader.Read()) result = reader["path"].ToString();
 
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
             return result;
         }
         public void GetDocSelect(Message mess)
         {
             query = "SELECT `pim` FROM doc WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
             res.Add("", "Все");
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["pim"].ToString());
+                    res.Add(reader["pim"].ToString());
                 }
             }
             else
             {
                 res.Add("no_doc");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void GetKPSelect(Message mess)
         {
             if (mess.args[1].Equals("all")) query = "SELECT `name` FROM kp WHERE `service` = @service";
             else query = "SELECT `name` FROM kp WHERE `service` = @service AND `id_doc` = @doc";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             if (!mess.args[1].Equals("all")) command.Parameters.AddWithValue("@doc", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
             res.Add("", "Все");
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["name"].ToString());
+                    res.Add(reader["name"].ToString());
                 }
             }
             else
             {
                 res.Add("no_doc");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -211,45 +218,46 @@ namespace DashBoardServer
             foreach (var item in dir.GetDirectories()) dirs.Add(item.ToString());
 
             query = "SELECT * FROM tests WHERE `service` = @service order by sort";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
 
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    try { if (dirs.Count > 0) dirs.Remove(SelectResult["id"].ToString()); }
+                    try { if (dirs.Count > 0) dirs.Remove(reader["id"].ToString()); }
                     catch { }
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             if (dirs.Count > 0)
             {
 
                 query = "INSERT INTO tests (`id`, `name`, `service`) VALUES (@id, @name, @service)";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 foreach (var item in dirs)
                 {
                     string query1 = "SELECT path FROM service WHERE `name` = @service";
-                    SQLiteCommand command1 = new SQLiteCommand(query1, database.connect);
+                    MySqlCommand command1 = new MySqlCommand(query1, database.connect);
                     command1.Parameters.AddWithValue("@service", mess.args[0]);
                     database.OpenConnection();
-                    SQLiteDataReader SelectResult1 = command1.ExecuteReader();
+                    reader1 = command1.ExecuteReader();
                     string direct = "";
-                    if (SelectResult1.HasRows) while (SelectResult1.Read()) direct = SelectResult1["path"].ToString();
-                    SelectResult1.Close();
+                    if (reader1.HasRows) while (reader1.Read()) direct = reader1["path"].ToString();
+                    reader1.Close();
                     database.CloseConnection();
 
                     string query2 = "INSERT INTO dirs (`test`, `service`, `path`) VALUES (@id, @service, @path)";
-                    SQLiteCommand command2 = new SQLiteCommand(query2, database.connect);
+                    MySqlCommand command2 = new MySqlCommand(query2, database.connect);
                     command2.Parameters.AddWithValue("@id", item.ToString());
                     command2.Parameters.AddWithValue("@service", mess.args[0]);
                     command2.Parameters.AddWithValue("@path", direct);
                     database.OpenConnection();
                     var InsertTesult2 = command2.ExecuteNonQuery();
                     database.CloseConnection();
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@id", item.ToString());
                     command.Parameters.AddWithValue("@name", item.ToString());
                     command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -270,45 +278,45 @@ namespace DashBoardServer
         public void GetAuthor(Message mess)
         {
             query = "SELECT `name` FROM authors WHERE `service` = @service OR `service` = 'all'";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
 
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["name"].ToString());
+                while (reader.Read()) res.Add(reader["name"].ToString());
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void GetStends(Message mess)
         {
             query = "SELECT `url` FROM stends";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
 
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["url"].ToString());
+                while (reader.Read()) res.Add(reader["url"].ToString());
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void GetVersion(Message mess)
         {
             query = "SELECT `version`, `data` FROM stends WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
 
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["version"].ToString(), SelectResult["data"].ToString());
+                while (reader.Read()) res.Add(reader["version"].ToString(), reader["data"].ToString());
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -319,34 +327,39 @@ namespace DashBoardServer
         public void GetTests(Message mess)
         {
             GetTestsPath(mess);
-            query = "SELECT * FROM tests WHERE `service` = @service AND `status` = @status";
-            command = new SQLiteCommand(query, database.connect);
+            Message resBuf = new Message();
+            query = "SELECT `id`, `name`, `author` FROM tests WHERE `service` = @service AND `status` = @status";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             if (mess.args[1].Equals("no_add")) command.Parameters.AddWithValue("@status", "no_add");
             else command.Parameters.AddWithValue("@status", "add");
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["id"].ToString());
-                    res.Add(SelectResult["name"].ToString());
-                    res.Add(SelectResult["author"].ToString());
-                    string query1 = "SELECT * FROM kp WHERE `service` = @service AND `test` = @test";
-                    SQLiteCommand command1 = new SQLiteCommand(query1, database.connect);
-                    command1.Parameters.AddWithValue("@service", mess.args[0]);
-                    command1.Parameters.AddWithValue("@test", mess.args[1]);
-                    SQLiteDataReader SelectResult1 = command1.ExecuteReader();
-                    if (SelectResult1.HasRows)
-                    {
-                        SelectResult1.Read();
-                        res.Add(SelectResult1["id"].ToString());
-                    }
-                    SelectResult1.Close();
+                    res.Add(reader["id"].ToString());
+                    res.Add(reader["name"].ToString());
+                    res.Add(reader["author"].ToString());
                 }
             }
-            SelectResult.Close();
+            reader.Close();
+            string query1 = "SELECT * FROM kp WHERE `service` = @service AND `test` = @test";
+            MySqlCommand command1 = new MySqlCommand(query1, database.connect);
+            command1.Parameters.AddWithValue("@service", mess.args[0]);
+            command1.Parameters.AddWithValue("@test", mess.args[1]);
+            reader1 = command1.ExecuteReader();
+            int index = 3;
+            if (reader1.HasRows)
+            {
+                while (reader1.Read())
+                {
+                    res.args.Insert(index, reader1["id"].ToString());
+                    index += 3;
+                }
+            }
+            reader1.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -357,22 +370,22 @@ namespace DashBoardServer
         public void GetTestsForPack(Message mess)
         {
             query = "SELECT * FROM tests WHERE `service` = @service AND `status` = 'add' order by sort";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["id"].ToString(), SelectResult["name"].ToString(), SelectResult["author"].ToString());
+                    res.Add(reader["id"].ToString(), reader["name"].ToString(), reader["author"].ToString());
                 }
             }
             else
             {
                 res.Add("no_tests_for_pack");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
         }
@@ -384,15 +397,15 @@ namespace DashBoardServer
         public void GetIPPc(Message mess)
         {
             query = "SELECT * FROM demons";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(
-                    SelectResult["name"].ToString(), SelectResult["ip"].ToString());
+                while (reader.Read()) res.Add(
+                    reader["name"].ToString(), reader["ip"].ToString());
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -403,24 +416,24 @@ namespace DashBoardServer
         public void GetPacksForList(Message mess)
         {
             query = "SELECT * FROM packs WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(
-                    SelectResult["id"].ToString(), SelectResult["name"].ToString()
-                    , SelectResult["tests"].ToString(), SelectResult["time"].ToString()
-                    , SelectResult["count_restart"].ToString()
-                    , SelectResult["ip"].ToString()
-                    , SelectResult["status"].ToString());
+                while (reader.Read()) res.Add(
+                    reader["id"].ToString(), reader["name"].ToString()
+                    , reader["tests"].ToString(), reader["time"].ToString()
+                    , reader["count_restart"].ToString()
+                    , reader["ip"].ToString()
+                    , reader["status"].ToString());
             }
             else
             {
                 res.Add("no_packs");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
         }
@@ -433,23 +446,23 @@ namespace DashBoardServer
         public void GetPackChange(Message mess)
         {
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["id"].ToString(), SelectResult["name"].ToString(),
-                    SelectResult["ip"].ToString(), SelectResult["time"].ToString(), SelectResult["count_restart"].ToString(),
-                    SelectResult["tests"].ToString(), SelectResult["browser"].ToString(), SelectResult["stend"].ToString());
+                while (reader.Read()) res.Add(reader["id"].ToString(), reader["name"].ToString(),
+                    reader["ip"].ToString(), reader["time"].ToString(), reader["count_restart"].ToString(),
+                    reader["tests"].ToString(), reader["browser"].ToString(), reader["stend"].ToString());
 
             }
             else
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -461,21 +474,20 @@ namespace DashBoardServer
         public void GetTestsThisPack(Message mess)
         {
             Tests testsPack = new Tests();
-            SQLiteDataReader SelectResult;
             query = "SELECT `tests` FROM packs WHERE `service` = @service AND `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
-            SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    testsPack = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    testsPack = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
             for (int i = 0; i < testsPack.id.Count; i++)
             {
@@ -483,40 +495,40 @@ namespace DashBoardServer
                 if (testsPack.duplicate[i] != "not") id = testsPack.duplicate[i];
                 else id = testsPack.id[i];
                 query = "SELECT * FROM tests WHERE `service` = @service AND `id` = @id order by sort";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id", id);
                 database.OpenConnection();
-                SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read())
+                    while (reader.Read())
                     {
-                        res.Add(testsPack.id[i], SelectResult["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.browser[i], testsPack.dependon[i], testsPack.duplicate[i]);
+                        res.Add(testsPack.id[i], reader["name"].ToString(), testsPack.time[i], testsPack.restart[i], testsPack.browser[i], testsPack.dependon[i], testsPack.duplicate[i]);
                     }
                 }
                 else
                 {
                     res.Add("no_tests");
                 }
-                SelectResult.Close();
+                reader.Close();
                 database.CloseConnection();
 
 
                 query = "SELECT * FROM statistic WHERE `service` = @service AND `id` = @id";
                 string result = "";
                 string time = "";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id", testsPack.id[i]);
                 database.OpenConnection();
-                SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read())
+                    while (reader.Read())
                     {
-                        result = SelectResult["result"].ToString();
-                        time = SelectResult["time_end"].ToString();
+                        result = reader["result"].ToString();
+                        time = reader["time_end"].ToString();
                     }
                     res.Add(time, result);
                 }
@@ -524,7 +536,7 @@ namespace DashBoardServer
                 {
                     res.Add("Нет данных", "Нет данных");
                 }
-                SelectResult.Close();
+                reader.Close();
                 database.CloseConnection();
 
             }
@@ -543,16 +555,16 @@ namespace DashBoardServer
             Message args = new Message();
             //  string argsS = "";
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", id_pack);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Tests te = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    Tests te = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                     for (int j = 0; j < te.id.Count; j++)
                     {
                         if (te.id[j].Equals(id))
@@ -567,7 +579,7 @@ namespace DashBoardServer
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
             // res.Add(argsS);
         }
@@ -580,102 +592,104 @@ namespace DashBoardServer
         public void GetPathToResult(Message mess)
         {
             query = "SELECT `path` FROM service WHERE `name` = @name";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@name", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                SelectResult.Read();
-                res.Add(SelectResult["path"].ToString());
+                reader.Read();
+                res.Add(reader["path"].ToString());
             }
             else res.Add("no");
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void GetTestResult(Message mess)
         {
             // хз на сколько это правильно, но это блять работает
-            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service AND tests.service = @service AND statistic.stend = @stend and statistic.last = 'last' order by tests.sort";
-            command = new SQLiteCommand(query, database.connect);
+            query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id " +
+                "WHERE statistic.service = @service AND tests.service = @service " +
+                "AND statistic.stend = @stend AND statistic.last = 'last' order by tests.sort";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@stend", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["name"].ToString(), SelectResult["result"].ToString(),
-                        SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["version"].ToString());
-                    if (SelectResult["author"].ToString() == "")
+                    res.Add(reader["name"].ToString(), reader["result"].ToString(),
+                        reader["time_step"].ToString(), reader["steps"].ToString(), reader["version"].ToString());
+                    if (reader["author"].ToString() == "")
                     {
                         query = "SELECT * FROM tests where id = @id and service = @service order by sort";
-                        SQLiteCommand command1 = new SQLiteCommand(query, database.connect);
+                        MySqlCommand command1 = new MySqlCommand(query, database.connect);
                         command1.Parameters.AddWithValue("@service", mess.args[0]);
-                        command1.Parameters.AddWithValue("@id", SelectResult["id"].ToString().Split('(')[0]);
+                        command1.Parameters.AddWithValue("@id", reader["id"].ToString().Split('(')[0]);
                         database.OpenConnection();
-                        SQLiteDataReader SelectResult1 = command1.ExecuteReader();
-                        if (SelectResult1.HasRows)
+                        reader1 = command1.ExecuteReader();
+                        if (reader1.HasRows)
                         {
-                            SelectResult1.Read();
-                            res.Add(SelectResult1["author"].ToString());
+                            reader1.Read();
+                            res.Add(reader1["author"].ToString());
                         }
-                        SelectResult1.Close();
+                        reader1.Close();
                     }
                     else
                     {
-                        res.Add(SelectResult["author"].ToString());
+                        res.Add(reader["author"].ToString());
                     }
-                    res.Add(SelectResult["id"].ToString());
+                    res.Add(reader["id"].ToString());
                 }
             }
             else
             {
                 res.Add("no_result");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
         }
         public void GetTestResultVersion(Message mess)
         {
             query = "SELECT * FROM statistic where `service` = @service and `version` = @version and `id` = @id and (`result`= 'Passed' or `result` = 'Warning')";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@version", mess.args[1]);
             command.Parameters.AddWithValue("@id", mess.args[2]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["result"].ToString());
+                    res.Add(reader["result"].ToString());
                 }
             }
         }
         public void GetVersions(Message mess)
         {//message.args[i] + "\n" + message.args[i + 5].Replace(".", ":").Replace("_", "__"))
             query = "SELECT * FROM statistic where service = @service and stend = @stend order by number desc";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@stend", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    if(!res.args.Contains(SelectResult["date"].ToString() + "\n" + SelectResult["version"].ToString().Replace(".", ":").Replace("_", "__")))
-                        res.Add(SelectResult["date"].ToString() + "\n" + SelectResult["version"].ToString().Replace(".", ":").Replace("_", "__"));
+                    if (!res.args.Contains(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__")))
+                        res.Add(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__"));
                 }
             }
             else
             {
                 res.Add("no_result");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -683,28 +697,27 @@ namespace DashBoardServer
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-
         public void GetTestResultInfo(Message mess)
         {
             query = "SELECT * FROM statistic inner join tests on statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and tests.service = @service ORDER BY tests.sort, statistic.number desc";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@stend", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["date"].ToString(), SelectResult["result"].ToString(),
-                        SelectResult["version"].ToString(), SelectResult["time_end"].ToString(), SelectResult["id"].ToString(), SelectResult["version"].ToString(), SelectResult["sort"].ToString());
+                    res.Add(reader["date"].ToString(), reader["result"].ToString(),
+                        reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
                 }
             }
             else
             {
                 res.Add("no_result");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -715,23 +728,23 @@ namespace DashBoardServer
         public void GetDocument(Message mess)
         {
             query = "SELECT `id`, `pim`, `date` FROM doc WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["id"].ToString(), SelectResult["pim"].ToString(),
-                        SelectResult["date"].ToString());
+                    res.Add(reader["id"].ToString(), reader["pim"].ToString(),
+                        reader["date"].ToString());
                 }
             }
             else
             {
                 res.Add("no_doc");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -743,21 +756,21 @@ namespace DashBoardServer
         public void GetDocInfo(Message mess)
         {
             query = "SELECT * FROM doc WHERE `service` = @service AND `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(
-                    SelectResult["pim"].ToString(), SelectResult["date"].ToString());
+                while (reader.Read()) res.Add(
+                    reader["pim"].ToString(), reader["date"].ToString());
             }
             else
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
         }
@@ -770,23 +783,23 @@ namespace DashBoardServer
         public void GetKPForDoc(Message mess)
         {
             query = "SELECT * FROM kp WHERE `service` = @service AND `id_doc` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(
-                    SelectResult["id"].ToString(), SelectResult["name"].ToString(),
-                    SelectResult["steps"].ToString(), SelectResult["author"].ToString(),
-                    SelectResult["date"].ToString(), SelectResult["test"].ToString());
+                while (reader.Read()) res.Add(
+                    reader["id"].ToString(), reader["name"].ToString(),
+                    reader["steps"].ToString(), reader["author"].ToString(),
+                    reader["date"].ToString(), reader["test"].ToString());
             }
             else
             {
                 res.Add("no_kp");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -798,34 +811,51 @@ namespace DashBoardServer
         public void GetKPInfo(Message mess)
         {
             string id_doc = mess.args[1].Equals("") ? "" : "AND `id_doc` = @id_doc ";
-            string id_kp = mess.args[2].Equals("") ? "" : "AND `id` = @id_kp ";
+            string id_kp = mess.args[2].Equals("") ? "" : "AND `id` = @id_kp ";       
+            List<string> doc = new List<string>();
             query = "SELECT * FROM kp WHERE `service` = @service " + id_doc + id_kp;
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id_doc", mess.args[1]);
             command.Parameters.AddWithValue("@id_kp", mess.args[2]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Message tests = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
+                    Message tests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
                     if (tests.args.Contains(mess.args[3]) || mess.args[3].Equals(""))
                     {
-                        string query1 = "SELECT * FROM doc WHERE `service` = @service AND `id` = @id";
-                        SQLiteCommand command1 = new SQLiteCommand(query1, database.connect);
-                        command1.Parameters.AddWithValue("@service", mess.args[0]);
-                        command1.Parameters.AddWithValue("@id", SelectResult["id_doc"].ToString());
-                        database.OpenConnection();
-                        SQLiteDataReader SelectResult1 = command1.ExecuteReader();
-                        SelectResult1.Read();
-                        res.Add(SelectResult["id"].ToString(), SelectResult["name"].ToString(), SelectResult["date"].ToString(), SelectResult1["id"].ToString());
+                        res.Add(reader["id"].ToString(), reader["name"].ToString(), reader["date"].ToString(), reader["id_doc"].ToString());                        
                     }
                 }
             }
-            SelectResult.Close();
-
+            reader.Close();
+            /*
+            int index = 0;
+            int index_insert = 4;
+            string query1 = "SELECT `id` FROM doc WHERE `service` = @service AND `id` = @id";
+            MySqlCommand command1 = new MySqlCommand(query1, database.connect);
+            command1.Parameters.AddWithValue("@service", mess.args[0]);
+            command1.Parameters.AddWithValue("@id", reader["id_doc"].ToString());
+            database.OpenConnection();
+            reader1 = command1.ExecuteReader();            
+            while (reader1.Read())
+            {
+                if (!doc[index].Equals("-"))
+                {
+                    res.args.Insert(index_insert, reader1["id"].ToString());
+                        //Add(reader["id"].ToString(), reader["name"].ToString(), reader["date"].ToString(), reader1["id"].ToString());
+                }
+                else
+                {
+                    res.args.Insert(index_insert, "-");
+                    //res.Add(reader["id"].ToString(), reader["name"].ToString(), reader["date"].ToString(), "-");
+                }
+                index++;
+                index_insert += 4;
+            }*/
             if (res.args.Count == 0) res.Add("error");
             database.CloseConnection();
         }
@@ -838,22 +868,22 @@ namespace DashBoardServer
         {
             ;
             query = "SELECT * FROM autostart WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["id"].ToString(),
-                    SelectResult["name"].ToString(), SelectResult["days"].ToString(),
-                    SelectResult["time"].ToString(), SelectResult["packs"].ToString(),
-                    SelectResult["type"].ToString(), SelectResult["status"].ToString());
+                while (reader.Read()) res.Add(reader["id"].ToString(),
+                    reader["name"].ToString(), reader["days"].ToString(),
+                    reader["time"].ToString(), reader["packs"].ToString(),
+                    reader["type"].ToString(), reader["status"].ToString());
             }
             else
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -865,23 +895,23 @@ namespace DashBoardServer
         public void GetAutostartInfo(Message mess)
         {
             query = "SELECT * FROM autostart WHERE `service` = @service AND `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["id"].ToString(),
-                    SelectResult["name"].ToString(), SelectResult["days"].ToString(),
-                    SelectResult["time"].ToString(), SelectResult["packs"].ToString(),
-                    SelectResult["type"].ToString(), SelectResult["status"].ToString());
+                while (reader.Read()) res.Add(reader["id"].ToString(),
+                    reader["name"].ToString(), reader["days"].ToString(),
+                    reader["time"].ToString(), reader["packs"].ToString(),
+                    reader["type"].ToString(), reader["status"].ToString());
             }
             else
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -893,63 +923,63 @@ namespace DashBoardServer
         public void GetCommnents(Message mess)
         {
             query = "SELECT `comments` FROM tests WHERE `service` = @service AND `id` = @id_test order by sort";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id_test", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read()) res.Add(SelectResult["comments"].ToString());
+                while (reader.Read()) res.Add(reader["comments"].ToString());
             }
             else
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void GetCharts(Message mess)
         {
-           
+
             for (int i = 2; i < mess.args.Count; i++)
             {
                 Message message = new Message();
                 query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service and tests.service = @service AND statistic.stend = @stend and statistic.result = 'Passed' order by tests.sort";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[i]);
                 command.Parameters.AddWithValue("@stend", mess.args[1]);
                 database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read())
+                    while (reader.Read())
                     {
                         message = new Message();
-                        message.Add(SelectResult["name"].ToString(), SelectResult["time_end"].ToString(),
-                            SelectResult["time_step"].ToString(), SelectResult["steps"].ToString(), SelectResult["date"].ToString());
-                        if (SelectResult["author"].ToString() == "")
+                        message.Add(reader["name"].ToString(), reader["time_end"].ToString(),
+                            reader["time_step"].ToString(), reader["steps"].ToString(), reader["date"].ToString());
+                        if (reader["author"].ToString() == "")
                         {
                             query = "SELECT * FROM tests where id = @id and service = @service order by sort";
-                            SQLiteCommand command1 = new SQLiteCommand(query, database.connect);
+                            MySqlCommand command1 = new MySqlCommand(query, database.connect);
                             command1.Parameters.AddWithValue("@service", mess.args[0]);
-                            command1.Parameters.AddWithValue("@id", SelectResult["id"].ToString().Split('(')[0]);
+                            command1.Parameters.AddWithValue("@id", reader["id"].ToString().Split('(')[0]);
                             database.OpenConnection();
-                            SQLiteDataReader SelectResult1 = command1.ExecuteReader();
-                            if (SelectResult1.HasRows)
+                            reader1 = command1.ExecuteReader();
+                            if (reader1.HasRows)
                             {
-                                SelectResult1.Read();
-                                message.Add(SelectResult1["author"].ToString());
+                                reader1.Read();
+                                message.Add(reader1["author"].ToString());
                             }
-                            SelectResult1.Close();
+                            reader1.Close();
                         }
                         else
                         {
-                            message.Add(SelectResult["author"].ToString());
+                            message.Add(reader["author"].ToString());
                         }
-                        message.Add(SelectResult["id"].ToString());
+                        message.Add(reader["id"].ToString());
                         res.Add(JsonConvert.SerializeObject(message));
-                        
+
                     }
                 }
 
@@ -958,56 +988,56 @@ namespace DashBoardServer
         public void GetErrors(Message mess)
         {
             query = "SELECT * FROM jira where `test` = @test";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(), SelectResult["data"].ToString(), SelectResult["status"].ToString(), SelectResult["executor"].ToString());
+                    res.Add(reader["name"].ToString(), reader["link"].ToString(), reader["type"].ToString(), reader["data"].ToString(), reader["status"].ToString(), reader["executor"].ToString());
                 }
             }
 
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
 
             query = "SELECT * FROM jira where `test` = @test ";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
             database.OpenConnection();
-            SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
-                    res.Add(SelectResult["name"].ToString(), SelectResult["link"].ToString(), SelectResult["type"].ToString(), SelectResult["data"].ToString(), SelectResult["executor"].ToString(), SelectResult["status"].ToString());
+                while (reader.Read())
+                    res.Add(reader["name"].ToString(), reader["link"].ToString(), reader["type"].ToString(), reader["data"].ToString(), reader["executor"].ToString(), reader["status"].ToString());
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void GetErrorsStatus(Message mess)
         {
             query = "SELECT * FROM jira where `test` = @test and (`type` = 'Ошибка' or `type` = 'Доработка' or `type` = 'Компонентная доработка') and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
                 res.Add("errors");
             }
             else
             {
-                SelectResult.Close();
+                reader.Close();
                 database.CloseConnection();
                 query = "SELECT * FROM jira where `test` = @test and `type` = 'Задача' and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@test", mess.args[1]);
                 database.OpenConnection();
-                SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
                     res.Add("issue");
                 }
@@ -1016,29 +1046,29 @@ namespace DashBoardServer
                     res.Add("no issue");
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void CheckErrors(Message mess)
         {
             Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648W");
-            query = "SELECT link FROM jira ";
-            command = new SQLiteCommand(query, database.connect);
+            query = "SELECT `link` FROM jira";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
                     var issues = from i in jira.Issues.Queryable
-                                 where i.Key == SelectResult["link"].ToString()
+                                 where i.Key == reader["link"].ToString()
                                  select i;
 
                     query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
                                    "WHERE `link` = @link";
-                    command = new SQLiteCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@link", SelectResult["link"].ToString());
+                    command = new MySqlCommand(query, database.connect);
+                    command.Parameters.AddWithValue("@link", reader["link"].ToString());
                     command.Parameters.AddWithValue("@status", issues.First().Status.Name);
                     command.Parameters.AddWithValue("@name", issues.First().Summary);
                     command.Parameters.AddWithValue("@type", issues.First().Type.Name);
@@ -1048,7 +1078,7 @@ namespace DashBoardServer
                     var UpdateTest = command.ExecuteNonQuery();
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         //-------------------------------------------------------------------------------------
@@ -1060,78 +1090,53 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public void AddTest(Message mess)
+        public void AddTechTest(Message mess)
         {
+            UpdateStatusTest(mess);
             Message tests = new Message();
-            // СДЕЛАТЬ
-            Comments comments = readTextOfTest(mess.args[0], mess.args[1]);
-            string name = comments.comment[0];
-            comments.comment.RemoveAt(0);
-            string steps = comments.comment[0];
-            comments.comment.RemoveAt(0);
-            comments.step.RemoveAt(0);
-            comments.step.RemoveAt(0);
-            string commS = JsonConvert.SerializeObject(comments);
-            query = "UPDATE tests SET `name` = @name, `status` = @status, " +
-                "`author` = @author, `comments` = @comments,`statistic` = @statistic ,`used` = @used " +
-                "WHERE `id` = @id AND `status` = @earlyStatus AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[1]);
-            command.Parameters.AddWithValue("@name", name);
-            command.Parameters.AddWithValue("@status", "add");
-            command.Parameters.AddWithValue("@author", mess.args[2]);
-            command.Parameters.AddWithValue("@comments", commS);
-            command.Parameters.AddWithValue("@statistic", mess.args[3]);
-            command.Parameters.AddWithValue("@used", "no");
+
+            query = "SELECT `id`, `test` FROM kp WHERE `service` = @service AND `id` = '-'";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@earlyStatus", "no_add");
             database.OpenConnection();
-            var UpdateTest = command.ExecuteNonQuery();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    if (reader["id"].ToString().Equals(mess.args[4]))
+                    {
+                        tests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
+                    }
+                }               
+            }
+            try
+            {
+                if (tests.args[0].Equals("not")) tests.args.RemoveAt(0);
+            }
+            catch { }
+            tests.Add(mess.args[1]);
+
+            reader.Close();
             database.CloseConnection();
 
-            if (!mess.args[4].Equals("-"))
+            query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
+                "WHERE `id` = @id and `service` = @service";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", JsonConvert.SerializeObject(tests));
+            command.Parameters.AddWithValue("@id", mess.args[4]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@steps", 0);
+            database.OpenConnection();
+            var resultComand = command.ExecuteNonQuery();
+            database.CloseConnection();
+
+            if (resultComand == 0)
             {
-                query = "SELECT `id`, `test`, `steps` FROM kp WHERE `service` = @service";
-                command = new SQLiteCommand(query, database.connect);
-                command.Parameters.AddWithValue("@service", mess.args[0]);
-                database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
-                int step = 0;
-                if (SelectResult.HasRows)
-                {
-                    while (SelectResult.Read())
-                    {
-                        if (SelectResult["id"].ToString().Equals(mess.args[4].Trim(' ')))
-                        {
-                            tests = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
-                            step = Int32.Parse(SelectResult["steps"].ToString());
-                        }
-                    }
-                }
-                SelectResult.Close();
-                database.CloseConnection();
-
-                if (tests.args[0].Equals("not")) tests.args.RemoveAt(0);
-                tests.Add(mess.args[1]);
-
-                query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
-                    "WHERE `id` = @id and `service` = @service";
-
-                command = new SQLiteCommand(query, database.connect);
-                command.Parameters.AddWithValue("@test", JsonConvert.SerializeObject(tests));
-                command.Parameters.AddWithValue("@id", mess.args[4]);
-                command.Parameters.AddWithValue("@service", mess.args[0]);
-                command.Parameters.AddWithValue("@steps", (step + Int32.Parse(steps)).ToString());
-                database.OpenConnection();
-                UpdateTest = command.ExecuteNonQuery();
-                database.CloseConnection();
-            }
-            else
-            {
-                query = "INSERT INTO kp (`id`, `name`, `steps`, `author`, `date`, `id_doc`, `service`, " +
-                    "`test`) VALUES (@id, @name, @steps, @author, @date, @id_doc, @service, @test)";
-
-                command = new SQLiteCommand(query, database.connect);
+                query = "INSERT INTO kp (`id`, `name`, `steps`, `author`, `date`, `id_doc`" +
+                ", `service`,`test`)"
+                + "VALUES (@id, @name, @steps, @author, @date, @id_doc, @service, @test)";
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", "-");
                 command.Parameters.AddWithValue("@name", "-");
                 command.Parameters.AddWithValue("@steps", 0);
@@ -1140,12 +1145,58 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@test", JsonConvert.SerializeObject(tests));
                 command.Parameters.AddWithValue("@id_doc", "-");
                 command.Parameters.AddWithValue("@date", "-");
-
                 database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
                 database.CloseConnection();
                 logger.WriteLog(InsertTesult.ToString() + " create kp");
             }
+            res.Add("OK");
+        }
+        public void AddTest(Message mess)
+        {
+            Message tests = new Message();
+            int step = 0;
+            // СДЕЛАТЬ
+            Comments comments = readTextOfTest(mess.args[0], mess.args[1]);
+            comments.comment.RemoveAt(0);
+            string steps = comments.comment[0];
+
+            UpdateStatusTest(mess);
+
+            query = "SELECT `id`, `test`, `steps` FROM kp WHERE `service` = @service";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            step = 0;
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    if (reader["id"].ToString().Equals(mess.args[4].Trim(' ')))
+                    {
+                        tests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
+                        step = Int32.Parse(reader["steps"].ToString());
+                    }
+                }
+            }
+            reader.Close();
+            database.CloseConnection();
+
+            if (tests.args[0].Equals("not")) tests.args.RemoveAt(0);
+            tests.Add(mess.args[1]);
+
+            query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
+                "WHERE `id` = @id and `service` = @service";
+
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@test", JsonConvert.SerializeObject(tests));
+            command.Parameters.AddWithValue("@id", mess.args[4]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@steps", (step + Int32.Parse(steps)).ToString());
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
 
             res.Add("OK");
         }
@@ -1159,7 +1210,7 @@ namespace DashBoardServer
         {
             query = "INSERT INTO doc (`id`,`pim`, `date`, `service`)"
                 + "VALUES (@id, @pim, @date, @service)";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", param.args[1]);
             command.Parameters.AddWithValue("@pim", param.args[1]);
             command.Parameters.AddWithValue("@date", param.args[2]);
@@ -1175,7 +1226,7 @@ namespace DashBoardServer
         {
 
             query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last'";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@last", "no_last");
             database.OpenConnection();
@@ -1185,7 +1236,7 @@ namespace DashBoardServer
             logger.WriteLog("{0} update test", UpdateTest.ToString());
             query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`, `last`)" +
                 "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend, @last)";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@test", mess.args[2]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1234,7 +1285,7 @@ namespace DashBoardServer
             query = "INSERT INTO packs (`id`, `name`, `tests`,`browser`, `time`, `count_restart`, `service`, " +
                 "`ip`, `status`, `stend`) VALUES (@id, @name, @tests, @browser, @time, @count_restart, " +
                 "@service, @ip, @status, @stend)";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@name", mess.args[1]);
             command.Parameters.AddWithValue("@tests", teS);
@@ -1250,11 +1301,11 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog("{0} create packs", InsertPack.ToString());
 
-            query = "UPDATE tests SET `used` = 'yes' WHERE `id` = @id and `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            query = "UPDATE tests SET `used` = 'yes' WHERE `id` = @id1 and `service` = @service";
             for (int i = 0; i < tests.args.Count; i++)
             {
-                command.Parameters.AddWithValue("@id", tests.args[i]);
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id1", tests.args[i]);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
@@ -1268,7 +1319,7 @@ namespace DashBoardServer
             query = "INSERT INTO kp (`id`, `name`, `steps`, `author`, `date`, `id_doc`" +
                 ", `service`,`test`)"
                 + "VALUES (@id, @name, @steps, @author, @date, @id_doc, @service, @test)";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1].Trim(' '));
             command.Parameters.AddWithValue("@name", mess.args[1].Trim(' '));
             command.Parameters.AddWithValue("@steps", mess.args[5]);
@@ -1288,7 +1339,7 @@ namespace DashBoardServer
         {
             query = "INSERT INTO autostart (`id`, `name`, `days`, `service`, `time`, `packs`, `type`)"
                 + "VALUES (@id_auto, @Name, @Days, @Service, @Time, @Packs, @Type)";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id_auto", mess.args[1]);
             command.Parameters.AddWithValue("@Name", mess.args[2]);
             command.Parameters.AddWithValue("@Days", mess.args[4]);
@@ -1307,15 +1358,15 @@ namespace DashBoardServer
         {
             List<string> tests = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Tests test = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    Tests test = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                     if (test.id.Contains(mess.args[1]))
                     {
                         for (int i = 0; i < test.id.Count; i++)
@@ -1335,14 +1386,14 @@ namespace DashBoardServer
                     }
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
             tests.Add(mess.args[1]);
             for (int i = 0; i < tests.Count; i++)
             {
                 query = "INSERT INTO jira (`test`, `link`,`status`)"
                 + "VALUES (@test, @link, 'В работе')";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@test", tests[i]);
                 command.Parameters.AddWithValue("@link", mess.args[2]);
                 database.OpenConnection();
@@ -1357,7 +1408,7 @@ namespace DashBoardServer
             foreach (var id in mess.args)
             {
                 query = "DELETE FROM autostart WHERE `service`= @service AND status = 'start' AND TYPE = 'one'";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", id);
                 database.OpenConnection();
                 command.ExecuteNonQuery();
@@ -1375,25 +1426,25 @@ namespace DashBoardServer
             comments.step.RemoveAt(0);
             comments.step.RemoveAt(0);
             query = "SELECT `id`, `test`, `steps` FROM kp WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
             Message tests = new Message();
             int step = 0;
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    if (SelectResult["test"].ToString().Contains(mess.args[1].Trim(' ')))
+                    if (reader["test"].ToString().Contains(mess.args[1].Trim(' ')))
                     {
-                        kp = SelectResult["id"].ToString();
-                        tests = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
-                        step = Int32.Parse(SelectResult["steps"].ToString());
+                        kp = reader["id"].ToString();
+                        tests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
+                        step = Int32.Parse(reader["steps"].ToString());
                     }
                 }
             }
-            SelectResult.Close();
+            reader.Close();
 
             if (tests.args[0].Equals("not")) tests.args.RemoveAt(0);
             tests.Add(mess.args[1]);
@@ -1401,31 +1452,31 @@ namespace DashBoardServer
             query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
                 "WHERE `id` = @id and `service` = @service";
 
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", JsonConvert.SerializeObject(tests));
             command.Parameters.AddWithValue("@id", kp);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@steps", (step - Int32.Parse(steps)).ToString());
-             command.ExecuteNonQuery();
+            command.ExecuteNonQuery();
 
 
             res.Add("OK");
 
             query = "DELETE FROM tests WHERE `service`= @service AND `id` = @id ";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.ExecuteNonQuery();
 
             query = "SELECT * FROM packs WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
-            SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Tests te = JsonConvert.DeserializeObject<Tests>(SelectResult["packs"].ToString());
+                    Tests te = JsonConvert.DeserializeObject<Tests>(reader["packs"].ToString());
                     if (te.id.Contains(mess.args[1]))
                     {
                         int i = te.id.IndexOf(mess.args[1]);
@@ -1437,62 +1488,62 @@ namespace DashBoardServer
                         te.time.RemoveAt(i);
                     }
                     query = "UPDATE autostart SET `packs` = @packs WHERE `service`= @service and `id` = @id";
-                    command = new SQLiteCommand(query, database.connect);
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@service", mess.args[0]);
-                    command.Parameters.AddWithValue("@id", SelectResult["id"].ToString());
+                    command.Parameters.AddWithValue("@id", reader["id"].ToString());
                     command.Parameters.AddWithValue("@packs", JsonConvert.SerializeObject(te));
                     command.ExecuteNonQuery();
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void DeletePack(Message mess)
         {
             query = "DELETE FROM packs WHERE `service`= @service and `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
             command.ExecuteNonQuery();
 
             query = "SELECT * FROM autostart WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Message message = JsonConvert.DeserializeObject<Message>(SelectResult["packs"].ToString());
+                    Message message = JsonConvert.DeserializeObject<Message>(reader["packs"].ToString());
                     if (message.args.Contains(mess.args[1]))
                     {
                         message.args.Remove(mess.args[1]);
                     }
                     query = "UPDATE autostart SET `packs` = @packs WHERE `service`= @service and `id` = @id";
-                    command = new SQLiteCommand(query, database.connect);
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@service", mess.args[0]);
-                    command.Parameters.AddWithValue("@id",  SelectResult["id"].ToString());
+                    command.Parameters.AddWithValue("@id", reader["id"].ToString());
                     command.Parameters.AddWithValue("@packs", JsonConvert.SerializeObject(message));
                     command.ExecuteNonQuery();
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         public void DeleteBug(Message mess)
         {
             List<string> tests = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Tests test = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    Tests test = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                     if (test.id.Contains(mess.args[1]))
                     {
                         for (int i = 0; i < test.id.Count; i++)
@@ -1512,13 +1563,13 @@ namespace DashBoardServer
                     }
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
             tests.Add(mess.args[1]);
             for (int i = 0; i < tests.Count; i++)
             {
                 query = "DELETE FROM jira WHERE `test`= @test AND link = @link";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@test", tests[i]);
                 command.Parameters.AddWithValue("@link", mess.args[2]);
                 database.OpenConnection();
@@ -1532,7 +1583,7 @@ namespace DashBoardServer
         public void updateTestsNow(Message mess)
         {
             query = "UPDATE demons SET `service` = @service, `id` = @id, `date` = @date WHERE `ip` = @ip";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[2]);
             command.Parameters.AddWithValue("@ip", mess.args[1]);
@@ -1554,35 +1605,37 @@ namespace DashBoardServer
             comments.step.RemoveAt(0);
             string commS = JsonConvert.SerializeObject(comments);
             query = "UPDATE tests SET `name` = @name," +
-                "`author` = @author, `comments` = @comments, `statistic` = @statistic WHERE `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+                "`author` = @author, `comments` = @comments, `statistic` = @statistic WHERE `id` = @id AND `service` = @service";
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@name", name);
             command.Parameters.AddWithValue("@author", mess.args[2]);
             command.Parameters.AddWithValue("@comments", commS);
             command.Parameters.AddWithValue("@statistic", mess.args[3]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
 
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
             logger.WriteLog("{0} update test", UpdateTest.ToString());
 
-            query = "SELECT * FROM kp WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            query = "SELECT `id`, `steps`, `test` FROM kp WHERE `service`= @service";/* AND (`test` LIKE '%" + mess.args[1] + "\",%' " +
+                "OR `test` LIKE '%"+ mess.args[1]+"\"]}' OR `test` LIKE '%["+ mess.args[1]+"\",%' OR `test` LIKE '%["+ mess.args[1]+"\"]%')";*/
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
+            reader = command.ExecuteReader();
             Message tests = new Message();
             Message addTests = new Message();
             int step = 0;
             int addStep = 0;
             string id = "";
             int i = 0;
-            if (SelectResult.HasRows)
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    Message tmp = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
+                    Message tmp = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
                     i = tmp.args.IndexOf(mess.args[1]);
                     if (i != -1)
                     {
@@ -1590,28 +1643,32 @@ namespace DashBoardServer
                         {
                             tests = tmp;
                             tests.args.RemoveAt(i);
-                            step = Int32.Parse(SelectResult["steps"].ToString());
-                            id = SelectResult["id"].ToString();
+                            step = Int32.Parse(reader["steps"].ToString());
+                            id = reader["id"].ToString();
                         }
                         catch { }
                     }
-                    if (SelectResult["id"].ToString().Equals(mess.args[4]))
+                    if (reader["id"].Equals(mess.args[4]))
                     {
-                        addTests = JsonConvert.DeserializeObject<Message>(SelectResult["test"].ToString());
-                        addStep = Int32.Parse(SelectResult["steps"].ToString());
+                        addTests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
+                        addStep = Int32.Parse(reader["steps"].ToString());
                     }
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
             if (tests.args.Count == 0) tests.args.Add("not");
-            if (addTests.args[0].Equals("not")) addTests.args.RemoveAt(0);
+            try
+            {
+                if (addTests.args[0].Equals("not")) addTests.args.RemoveAt(0);
+            }
+            catch { }
             addTests.Add(mess.args[1]);
 
             query = "UPDATE kp SET `test` = @newTest, `steps` = @steps " +
                 "WHERE `id` = @id and `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", id);
             command.Parameters.AddWithValue("@newTest", JsonConvert.SerializeObject(tests));
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1623,7 +1680,7 @@ namespace DashBoardServer
             query = "UPDATE kp SET `test` = @test, `steps` = @steps " +
                 "WHERE `id` = @id and `service` = @service";
 
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", JsonConvert.SerializeObject(addTests));
             command.Parameters.AddWithValue("@id", mess.args[4]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1638,24 +1695,24 @@ namespace DashBoardServer
             if (mess.args[1] != "no_version")
             {
                 query = "SELECT * FROM stends where `url` = @url and `version` = @version";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@url", mess.args[1]);
                 command.Parameters.AddWithValue("@version", mess.args[2]);
                 database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
+                reader = command.ExecuteReader();
                 Message messeage = new Message();
-                if (SelectResult.HasRows)
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read()) messeage.Add(
-                        SelectResult["version"].ToString());
+                    while (reader.Read()) messeage.Add(
+                        reader["version"].ToString());
                 }
-                SelectResult.Close();
+                reader.Close();
                 database.CloseConnection();
                 if (messeage.args.Count == 0)
                 {
                     query = "UPDATE stends SET `version` = @version," +
                     "`data` = @data WHERE `service` = @service";
-                    command = new SQLiteCommand(query, database.connect);
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@version", mess.args[2]);
                     command.Parameters.AddWithValue("@data", mess.args[3]);
                     command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1669,21 +1726,21 @@ namespace DashBoardServer
         public void UpdateTestChange(Message mess)
         {
             query = "SELECT * FROM tests WHERE `service` = @service AND `id` = @id order by sort";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
-                    res.Add(SelectResult["name"].ToString(), SelectResult["kp"].ToString(), SelectResult["statistic"].ToString());
+                while (reader.Read())
+                    res.Add(reader["name"].ToString(), reader["kp"].ToString(), reader["statistic"].ToString());
             }
             else
             {
                 res.Add("error");
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
         }
         /// <summary>
@@ -1696,7 +1753,7 @@ namespace DashBoardServer
         {
             query = "UPDATE packs SET `name` = @newname,`time` = @time, `count_restart` = @restart, `ip` = @ip, " +
                 "`tests` = @tests, `browser` = @browser ,`stend` = @stend WHERE `id` = @id_pack AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id_pack", mess.args[1]);
             command.Parameters.AddWithValue("@newname", mess.args[2]);
             command.Parameters.AddWithValue("@time", mess.args[4]);
@@ -1716,7 +1773,7 @@ namespace DashBoardServer
             for (int i = 0; i < te.id.Count; i++)
             {
                 query = "UPDATE tests SET `used` = @used WHERE `id` = @id AND `service` = @service";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", te.id[i]);
                 command.Parameters.AddWithValue("@used", "yes");
                 command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1730,7 +1787,7 @@ namespace DashBoardServer
             for (int i = 0; i < removeTe.args.Count; i++)
             {
                 query = "UPDATE tests SET `used` = @used WHERE `id` = @id AND `service` = @service";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", removeTe.args[i]);
                 command.Parameters.AddWithValue("@used", "no");
                 command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1746,7 +1803,7 @@ namespace DashBoardServer
         {
             query = "UPDATE doc SET `pim` = @pim," +
                 "`date` = @date WHERE `id` = @id_doc AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id_doc", mess.args[3]);
             command.Parameters.AddWithValue("@pim", mess.args[1]);
             command.Parameters.AddWithValue("@date", mess.args[2]);
@@ -1763,7 +1820,7 @@ namespace DashBoardServer
         {
             query = "UPDATE kp SET `name` = @name, " +
                 "`date` = @date, `author` = @author WHERE `id` = @id_kp AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id_kp", mess.args[1]);
             command.Parameters.AddWithValue("@name", mess.args[2]);
             command.Parameters.AddWithValue("@date", mess.args[3]);
@@ -1780,9 +1837,6 @@ namespace DashBoardServer
         public void StartTests(Message mess)
         {
             StartTests startTests = new StartTests();
-
-            SQLiteDataReader SelectResult;
-            SQLiteDataReader SelectResult1;
             Database database1 = new Database();
 
             Message request = new Message();
@@ -1791,7 +1845,7 @@ namespace DashBoardServer
             Tests tests1 = new Tests();
             List<string> packs = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             if (mess.args[1] == "no_pack")
             {
                 mess.args.RemoveAt(1);
@@ -1807,21 +1861,21 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id_pack", mess.args[1]);
                 database.OpenConnection();
-                SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read())
+                    while (reader.Read())
                     {
-                        if (SelectResult["status"].ToString() == "start")
+                        if (reader["status"].ToString() == "start")
                         {
-                            SelectResult.Close();
+                            reader.Close();
                             database.CloseConnection();
                             res.Add("START");
                             return;
                         }
                     }
                 }
-                SelectResult.Close();
+                reader.Close();
                 database.CloseConnection();
             }
             if (mess.args.Count > 1)
@@ -1830,18 +1884,18 @@ namespace DashBoardServer
                 {
                     query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack AND " +
                     "`status` = 'no_start'";
-                    command = new SQLiteCommand(query, database.connect);
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@service", mess.args[0]);
                     command.Parameters.AddWithValue("@id_pack", mess.args[i]);
                     database.OpenConnection();
-                    SelectResult = command.ExecuteReader();
+                    reader = command.ExecuteReader();
 
-                    if (SelectResult.HasRows)
+                    if (reader.HasRows)
                     {
-                        while (SelectResult.Read())
+                        while (reader.Read())
                         {
-                            packs.Add(SelectResult["id"].ToString());
-                            tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                            packs.Add(reader["id"].ToString());
+                            tests = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                             for (int j = 0; j < tests1.id.Count; j++)
                             {
                                 int q = tests.id.IndexOf(tests1.id[j]);
@@ -1864,33 +1918,33 @@ namespace DashBoardServer
                             for (int j = 0; j < tests.id.Count; j++)
                             {
                                 query = "SELECT `path` FROM dirs WHERE `service` = @service AND `test` = @test";
-                                command = new SQLiteCommand(query, database.connect);
+                                command = new MySqlCommand(query, database.connect);
                                 command.Parameters.AddWithValue("@service", mess.args[0]);
                                 command.Parameters.AddWithValue("@test", tests.id[j]);
                                 database.OpenConnection();
-                                SelectResult1 = command.ExecuteReader();
-                                if (SelectResult1.HasRows)
+                                reader1 = command.ExecuteReader();
+                                if (reader1.HasRows)
                                 {
-                                    while (SelectResult1.Read())
+                                    while (reader1.Read())
                                     {
-                                        dirs.Add(SelectResult1["path"].ToString());
+                                        dirs.Add(reader1["path"].ToString());
                                     }
                                 }
-                                SelectResult1.Close();
+                                reader1.Close();
                                 //database1.CloseConnection();
                             }
-                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), SelectResult["ip"].ToString(), SelectResult["time"].ToString(), JsonConvert.SerializeObject(tests), SelectResult["browser"].ToString(), SelectResult["count_restart"].ToString(), SelectResult["stend"].ToString());
+                            request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), reader["ip"].ToString(), reader["time"].ToString(), JsonConvert.SerializeObject(tests), reader["browser"].ToString(), reader["count_restart"].ToString(), reader["stend"].ToString());
 
                         }
                     }
-                    SelectResult.Close();
+                    reader.Close();
                     database.CloseConnection();
                 }
                 request.Add("START");
                 packs.ForEach(id =>
                 {
                     query = "UPDATE packs SET `status` = 'start' WHERE `id` = @id and `service` = @service";
-                    command = new SQLiteCommand(query, database.connect);
+                    command = new MySqlCommand(query, database.connect);
                     command.Parameters.AddWithValue("@id", id);
                     command.Parameters.AddWithValue("@service", mess.args[0]);
                     database.OpenConnection();
@@ -1909,11 +1963,41 @@ namespace DashBoardServer
         {
             query = "UPDATE autostart SET `status` = 'no_start' WHERE `status` = 'start' AND `service`= @service " +
                 "AND `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[0]);
             command.Parameters.AddWithValue("@service", mess.args[1]);
             database.OpenConnection();
             command.ExecuteNonQuery();
+            database.CloseConnection();
+        }
+        public void UpdateStatusTest(Message mess)
+        {
+            Message tests = new Message();
+            int step = 0;
+            // СДЕЛАТЬ
+            Comments comments = readTextOfTest(mess.args[0], mess.args[1]);
+            string name = comments.comment[0];
+            comments.comment.RemoveAt(0);
+            string steps = comments.comment[0];
+            comments.comment.RemoveAt(0);
+            comments.step.RemoveAt(0);
+            comments.step.RemoveAt(0);
+            string commS = JsonConvert.SerializeObject(comments);
+            query = "UPDATE tests SET `name` = @name, `status` = @status, " +
+                "`author` = @author, `comments` = @comments,`statistic` = @statistic ,`used` = @used " +
+                "WHERE `id` = @id AND `status` = @earlyStatus AND `service` = @service";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@name", name);
+            command.Parameters.AddWithValue("@status", "add");
+            command.Parameters.AddWithValue("@author", mess.args[2]);
+            command.Parameters.AddWithValue("@comments", commS);
+            command.Parameters.AddWithValue("@statistic", mess.args[3]);
+            command.Parameters.AddWithValue("@used", "no");
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@earlyStatus", "no_add");
+            database.OpenConnection();
+            var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
         }
         public void UpdateStatusPack(Message mess)
@@ -1921,7 +2005,7 @@ namespace DashBoardServer
             foreach (var id in mess.args)
             {
                 query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", id);
                 database.OpenConnection();
                 command.ExecuteNonQuery();
@@ -1933,12 +2017,12 @@ namespace DashBoardServer
             database.OpenConnection();
             Tests te = new Tests();
             query = "SELECT * FROM packs WHERE `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            while (SelectResult.Read())
+            reader = command.ExecuteReader();
+            while (reader.Read())
             {
-                te = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                te = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                 for (int j = 0; j < te.id.Count; j++)
                 {
                     if (te.id[j].Equals(mess.args[2]))
@@ -1951,12 +2035,12 @@ namespace DashBoardServer
                     }
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
             string teS = JsonConvert.SerializeObject(te);
             query = "UPDATE packs SET `tests` = @tests WHERE `id` = @id AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@tests", teS);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1974,15 +2058,15 @@ namespace DashBoardServer
             if (mess.args[3] == "add")
             {
                 query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id", mess.args[1]);
                 database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    SelectResult.Read();
-                    tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    reader.Read();
+                    tests = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                     int j = 0;
                     int q = 0;
                     for (int i = 0; i < tests.id.Count; i++)
@@ -2010,20 +2094,20 @@ namespace DashBoardServer
                 {
                     res.Add("error");
                 }
-                SelectResult.Close();
+                reader.Close();
             }
             else
             {
                 query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id", mess.args[1]);
                 database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    SelectResult.Read();
-                    tests = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                    reader.Read();
+                    tests = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                     int q = 0;
                     for (int i = 0; i < tests.id.Count; i++)
                     {
@@ -2044,10 +2128,10 @@ namespace DashBoardServer
                 {
                     res.Add("error");
                 }
-                SelectResult.Close();
+                reader.Close();
             }
             query = "UPDATE packs SET `tests` = @tests WHERE `id` = @id AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@tests", JsonConvert.SerializeObject(tests));
@@ -2061,7 +2145,7 @@ namespace DashBoardServer
         public void UpdateAutostart(Message mess)
         {
             query = "UPDATE autostart SET `name` = @name, `days` = @days, `time` = @time, `packs` = @packs, `type` = @type WHERE `id` = @id AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@name", mess.args[2]);
@@ -2079,12 +2163,12 @@ namespace DashBoardServer
         public void ChangePositionTests(Message mess)
         {
             Message ids = JsonConvert.DeserializeObject<Message>(mess.args[1]);
-            for(int i = 0; i < ids.args.Count; i++)
+            for (int i = 0; i < ids.args.Count; i++)
             {
                 query = "UPDATE tests SET `sort` = @sort WHERE `id` = @id AND `service` = @service";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", ids.args[i]);
-                command.Parameters.AddWithValue("@sort", i+1);
+                command.Parameters.AddWithValue("@sort", i + 1);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
 
                 database.OpenConnection();
@@ -2099,12 +2183,12 @@ namespace DashBoardServer
             Tests te;
             Tests tmp = new Tests();
             query = "SELECT * FROM packs WHERE `id` = @id";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            while (SelectResult.Read())
+            reader = command.ExecuteReader();
+            while (reader.Read())
             {
-                te = JsonConvert.DeserializeObject<Tests>(SelectResult["tests"].ToString());
+                te = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                 for (int i = 0; i < ids.args.Count; i++)
                 {
                     int j = te.id.IndexOf(ids.args[i]);
@@ -2124,13 +2208,13 @@ namespace DashBoardServer
                     tmp.duplicate.Add(te.duplicate[j]);
                 }
             }
-            SelectResult.Close();
+            reader.Close();
             database.CloseConnection();
 
 
             string teS = JsonConvert.SerializeObject(tmp);
             query = "UPDATE packs SET `tests` = @tests WHERE `id` = @id AND `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@tests", teS);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -2148,23 +2232,23 @@ namespace DashBoardServer
             for (int i = 1; i < mess.args.Count; i++)
             {
                 query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id", mess.args[i]);
                 database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read())
+                    while (reader.Read())
                     {
-                        message.Add(mess.args[i], SelectResult["ip"].ToString());
+                        message.Add(mess.args[i], reader["ip"].ToString());
                     }
                 }
             }
             for (int i = 0; i < message.args.Count; i += 2)
             {
                 query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", message.args[i]);
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
@@ -2187,15 +2271,15 @@ namespace DashBoardServer
             Message message = new Message();
 
             query = "SELECT * FROM demons WHERE `service` = @service";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            if (SelectResult.HasRows)
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
             {
-                while (SelectResult.Read())
+                while (reader.Read())
                 {
-                    res.Add(SelectResult["ip"].ToString(), SelectResult["id"].ToString(), SelectResult["date"].ToString());
+                    res.Add(reader["ip"].ToString(), reader["id"].ToString(), reader["date"].ToString());
                 }
 
             }
@@ -2208,26 +2292,26 @@ namespace DashBoardServer
             {
                 Thread.Sleep(1000);
                 query = "SELECT * FROM packs WHERE `service` = @service";
-                command = new SQLiteCommand(query, database.connect);
+                command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 database.OpenConnection();
-                SQLiteDataReader SelectResult = command.ExecuteReader();
-                if (SelectResult.HasRows)
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    while (SelectResult.Read())
+                    while (reader.Read())
                     {
-                        if (message.args.Contains(SelectResult["id"].ToString()))
+                        if (message.args.Contains(reader["id"].ToString()))
                         {
-                            if (message.args[message.args.IndexOf(SelectResult["id"].ToString()) + 1] != SelectResult["status"].ToString() && SelectResult["status"].ToString() == "no_start")
+                            if (message.args[message.args.IndexOf(reader["id"].ToString()) + 1] != reader["status"].ToString() && reader["status"].ToString() == "no_start")
                             {
-                                res.Add("push", "pack", SelectResult["id"].ToString());
+                                res.Add("push", "pack", reader["id"].ToString());
                                 return;
                             }
-                            message.args[message.args.IndexOf(SelectResult["id"].ToString()) + 1] = SelectResult["status"].ToString();
+                            message.args[message.args.IndexOf(reader["id"].ToString()) + 1] = reader["status"].ToString();
                         }
                         else
                         {
-                            message.Add(SelectResult["id"].ToString(), SelectResult["status"].ToString());
+                            message.Add(reader["id"].ToString(), reader["status"].ToString());
                         }
                     }
                 }
@@ -2243,13 +2327,13 @@ namespace DashBoardServer
             Comments comments = new Comments();
             string path = "";
             query = "SELECT * FROM dirs WHERE `test` = @test";
-            command = new SQLiteCommand(query, database.connect);
+            command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", testId);
 
             database.OpenConnection();
-            SQLiteDataReader SelectResult = command.ExecuteReader();
-            while (SelectResult.Read()) path = SelectResult["Path"].ToString();
-            SelectResult.Close();
+            reader = command.ExecuteReader();
+            while (reader.Read()) path = reader["Path"].ToString();
+            reader.Close();
             database.CloseConnection();
 
             DirectoryInfo path1 = new DirectoryInfo(path + "\\" + testId);

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Data.SqlClient;
 using System.Data.Linq;
 using System.Data.SQLite;
+using MySql.Data.MySqlClient;
 
 namespace DashBoardServer
 {
@@ -18,9 +19,9 @@ namespace DashBoardServer
         //const string ip = "172.31.197.89";
         //const string ip = "172.17.42.40";
         //const string ip = "172.31.197.232";
-       // const string ip = "172.17.42.32";
-        const string ip = "127.0.0.1";
-       // const string ip = "172.31.191.200";
+        const string ip = "172.17.42.32";
+        // const string ip = "127.0.0.1";
+        //const string ip = "172.31.191.200";
         static TcpListener listener;
 
         static class Data
@@ -38,7 +39,7 @@ namespace DashBoardServer
                 Console.WriteLine("Произведен запуск Asylum!");
                 Console.WriteLine("\n");
                 Console.WriteLine("Сервер готов принимать подключения");
-                Console.WriteLine("==================================");
+                Console.WriteLine("==================================");                
 
                 try
                 {
