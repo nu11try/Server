@@ -116,13 +116,10 @@ namespace DashBoardServer
                     Message args3 = JsonConvert.DeserializeObject<Message>(project);
                     Message args4 = new Message();
                     Message args5 = new Message();
-                    for (int i = 0; i < args.args.Count; i++)
+                    for (int i = 0; i < args3.args.Count; i++)
                     {
-                        if (args3.args.Contains(args.args[i]))
-                        {
-                            args4.Add(args1.args[i]);
-                            args5.Add(args2.args[i]);
-                        }
+                        args4.Add(args1.args[args.args.IndexOf(args3.args[i])]);
+                        args5.Add(args2.args[args.args.IndexOf(args3.args[i])]);
                     }
                     res.Add(JsonConvert.SerializeObject(args4));
                     res.Add(JsonConvert.SerializeObject(args5));
