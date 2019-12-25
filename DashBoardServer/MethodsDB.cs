@@ -27,6 +27,7 @@ namespace DashBoardServer
 
         public string transformation(string param)
         {
+
             Message mess = JsonConvert.DeserializeObject<Message>(param);
             Type type = typeof(MethodsDB);
             object o = Activator.CreateInstance(type);
@@ -60,22 +61,27 @@ namespace DashBoardServer
 
             database.OpenConnection();
             MySqlDataReader reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                res.Add("yes");
+            if (reader.HasRows) res.Add("yes");                            
+            else res.Add("no");
+            reader.Close();
+            database.CloseConnection();
 
+            if (res.args[0] == "yes")
+            {
                 query = "INSERT INTO auth_users (`ip`,`login`)" + "VALUES (@ip , @login)";
                 command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@ip", mess.args[2]);
                 command.Parameters.AddWithValue("@login", mess.args[0]);
+                database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
+                database.CloseConnection();
+                mess.args.RemoveAt(0);
+                mess.args.RemoveAt(1);
+                GetAuth(mess);
             }
-            if (res.args.Count == 0) res.Add("no");
-            reader.Close();
-            database.CloseConnection();
         }
         public void GetAuth(Message mess)
-        { 
+        {
             query = "SELECT * FROM auth_users inner join user on auth_users.login = user.login WHERE `ip` = @ip";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@ip", mess.args[0]);
@@ -93,29 +99,33 @@ namespace DashBoardServer
                 reader1 = command.ExecuteReader();
                 Message args = new Message();
                 Message args1 = new Message();
-
+                Message args2 = new Message();
                 while (reader1.Read())
                 {
                     args.Add(reader1["name"].ToString());
                     args1.Add(reader1["full_name"].ToString());
+                    args2.Add(reader1["stend"].ToString());
                 }
                 if (project == "{\"args\":[\"all\"]}")
                 {
-                    res.Add(JsonConvert.SerializeObject(args), JsonConvert.SerializeObject(args1));
+                    res.Add(JsonConvert.SerializeObject(args), JsonConvert.SerializeObject(args1), JsonConvert.SerializeObject(args2));
                 }
                 else
                 {
                     res.Add(project);
-                    Message args2 = JsonConvert.DeserializeObject<Message>(project);
-                    Message args3 = new Message();
+                    Message args3 = JsonConvert.DeserializeObject<Message>(project);
+                    Message args4 = new Message();
+                    Message args5 = new Message();
                     for (int i = 0; i < args.args.Count; i++)
                     {
-                        if (args2.args.Contains(args.args[i]))
+                        if (args3.args.Contains(args.args[i]))
                         {
-                            args3.Add(args1.args[i]);
+                            args4.Add(args1.args[i]);
+                            args5.Add(args2.args[i]);
                         }
                     }
-                    res.Add(JsonConvert.SerializeObject(args3));
+                    res.Add(JsonConvert.SerializeObject(args4));
+                    res.Add(JsonConvert.SerializeObject(args5));
                 }
 
             }
@@ -132,9 +142,9 @@ namespace DashBoardServer
             res.Add(command.ExecuteNonQuery().ToString());
             database.CloseConnection();
         }
-        //-------------------------------------------------------------------------------------
+        //----------------------------------------------------------------------------------
         // ФУНКЦИИ ПОЛУЧЕНИЯ
-        //-------------------------------------------------------------------------------------
+        //----------------------------------------------------------------------------------
         /// <summary>
         /// Функция получения пути для сервиса (для тестов)
         /// </summary>
@@ -264,6 +274,12 @@ namespace DashBoardServer
                     database.OpenConnection();
                     var InsertTesult = command.ExecuteNonQuery();
                     database.CloseConnection();
+                    string query3 = "UPDATE tests SET `sort` = `key` where `id` = @id";
+                    command = new MySqlCommand(query3, database.connect);
+                    command.Parameters.AddWithValue("@id", item.ToString());
+                    database.OpenConnection();
+                    InsertTesult = command.ExecuteNonQuery();
+                    database.CloseConnection();
                 }
                 Console.WriteLine("{0} add tests ", dirs.Count().ToString());
                 Console.WriteLine("{0} tests for return ", res.args.Count().ToString());
@@ -306,9 +322,9 @@ namespace DashBoardServer
         }
         public void GetVersion(Message mess)
         {
-            query = "SELECT `version`, `data` FROM stends WHERE `service` = @service";
+            query = "SELECT `version`, `data` FROM stends WHERE `url` = @url";
             command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@url", mess.args[1]);
             database.OpenConnection();
             reader = command.ExecuteReader();
 
@@ -328,7 +344,7 @@ namespace DashBoardServer
         {
             GetTestsPath(mess);
             Message resBuf = new Message();
-            query = "SELECT `id`, `name`, `author` FROM tests WHERE `service` = @service AND `status` = @status";
+            query = "SELECT `id`, `name`, `author`, `sort` FROM tests WHERE `service` = @service AND `status` = @status order by `sort`";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             if (mess.args[1].Equals("no_add")) command.Parameters.AddWithValue("@status", "no_add");
@@ -342,25 +358,26 @@ namespace DashBoardServer
                     res.Add(reader["id"].ToString());
                     res.Add(reader["name"].ToString());
                     res.Add(reader["author"].ToString());
+                    res.Add(reader["sort"].ToString());
+                    string query1 = "SELECT * FROM kp WHERE `service` = @service";
+                    Database database1 = new Database();
+                    database1.OpenConnection();
+                    MySqlCommand command1 = new MySqlCommand(query1, database1.connect);
+                    command1.Parameters.AddWithValue("@service", mess.args[0]);
+                    reader1 = command1.ExecuteReader();
+                    if (reader1.HasRows)
+                    {
+                        while (reader1.Read())
+                        {
+                            if (reader1["test"].ToString().Contains("\"" + reader["id"].ToString() + "\""))
+                                res.Add(reader1["name"].ToString());
+                        }
+                    }
+                    reader1.Close();
+                    database1.CloseConnection();
                 }
             }
             reader.Close();
-            string query1 = "SELECT * FROM kp WHERE `service` = @service AND `test` = @test";
-            MySqlCommand command1 = new MySqlCommand(query1, database.connect);
-            command1.Parameters.AddWithValue("@service", mess.args[0]);
-            command1.Parameters.AddWithValue("@test", mess.args[1]);
-            reader1 = command1.ExecuteReader();
-            int index = 3;
-            if (reader1.HasRows)
-            {
-                while (reader1.Read())
-                {
-                    res.args.Insert(index, reader1["id"].ToString());
-                    index += 3;
-                }
-            }
-            reader1.Close();
-            database.CloseConnection();
         }
         /// <summary>
         /// Функция получения тестов набора
@@ -607,6 +624,7 @@ namespace DashBoardServer
         }
         public void GetTestResult(Message mess)
         {
+            Database database1 = new Database();
             // хз на сколько это правильно, но это блять работает
             query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id " +
                 "WHERE statistic.service = @service AND tests.service = @service " +
@@ -625,10 +643,11 @@ namespace DashBoardServer
                     if (reader["author"].ToString() == "")
                     {
                         query = "SELECT * FROM tests where id = @id and service = @service order by sort";
-                        MySqlCommand command1 = new MySqlCommand(query, database.connect);
+                        MySqlCommand command1 = new MySqlCommand(query, database1.connect);
                         command1.Parameters.AddWithValue("@service", mess.args[0]);
                         command1.Parameters.AddWithValue("@id", reader["id"].ToString().Split('(')[0]);
-                        database.OpenConnection();
+
+                        database1.OpenConnection();
                         reader1 = command1.ExecuteReader();
                         if (reader1.HasRows)
                         {
@@ -636,12 +655,14 @@ namespace DashBoardServer
                             res.Add(reader1["author"].ToString());
                         }
                         reader1.Close();
+                        database1.CloseConnection();
                     }
                     else
                     {
                         res.Add(reader["author"].ToString());
                     }
                     res.Add(reader["id"].ToString());
+                    GetErrorsStatus(reader["id"].ToString());
                 }
             }
             else
@@ -671,7 +692,7 @@ namespace DashBoardServer
         }
         public void GetVersions(Message mess)
         {//message.args[i] + "\n" + message.args[i + 5].Replace(".", ":").Replace("_", "__"))
-            query = "SELECT * FROM statistic where service = @service and stend = @stend order by number desc";
+            query = "SELECT * FROM statistic where service = @service and stend = @stend order by statistic.key desc";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@stend", mess.args[1]);
@@ -699,7 +720,7 @@ namespace DashBoardServer
         /// <returns></returns>
         public void GetTestResultInfo(Message mess)
         {
-            query = "SELECT * FROM statistic inner join tests on statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and tests.service = @service ORDER BY tests.sort, statistic.number desc";
+            query = "SELECT * FROM statistic inner join tests on statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and tests.service = @service ORDER BY tests.sort, statistic.key desc";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             command.Parameters.AddWithValue("@stend", mess.args[1]);
@@ -811,7 +832,7 @@ namespace DashBoardServer
         public void GetKPInfo(Message mess)
         {
             string id_doc = mess.args[1].Equals("") ? "" : "AND `id_doc` = @id_doc ";
-            string id_kp = mess.args[2].Equals("") ? "" : "AND `id` = @id_kp ";       
+            string id_kp = mess.args[2].Equals("") ? "" : "AND `id` = @id_kp ";
             List<string> doc = new List<string>();
             query = "SELECT * FROM kp WHERE `service` = @service " + id_doc + id_kp;
             command = new MySqlCommand(query, database.connect);
@@ -827,7 +848,7 @@ namespace DashBoardServer
                     Message tests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
                     if (tests.args.Contains(mess.args[3]) || mess.args[3].Equals(""))
                     {
-                        res.Add(reader["id"].ToString(), reader["name"].ToString(), reader["date"].ToString(), reader["id_doc"].ToString());                        
+                        res.Add(reader["id"].ToString(), reader["name"].ToString(), reader["date"].ToString(), reader["id_doc"].ToString());
                     }
                 }
             }
@@ -982,7 +1003,7 @@ namespace DashBoardServer
 
                     }
                 }
-
+                reader.Close();
             }
         }
         public void GetErrors(Message mess)
@@ -1002,42 +1023,29 @@ namespace DashBoardServer
 
             reader.Close();
             database.CloseConnection();
-
-
-            query = "SELECT * FROM jira where `test` = @test ";
-            command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            database.OpenConnection();
-            reader = command.ExecuteReader();
-            if (reader.HasRows)
-            {
-                while (reader.Read())
-                    res.Add(reader["name"].ToString(), reader["link"].ToString(), reader["type"].ToString(), reader["data"].ToString(), reader["executor"].ToString(), reader["status"].ToString());
-            }
-            reader.Close();
-            database.CloseConnection();
         }
-        public void GetErrorsStatus(Message mess)
+        public void GetErrorsStatus(string test)
         {
             query = "SELECT * FROM jira where `test` = @test and (`type` = 'Ошибка' or `type` = 'Доработка' or `type` = 'Компонентная доработка') and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
-            command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@test", mess.args[1]);
-            database.OpenConnection();
-            reader = command.ExecuteReader();
-            if (reader.HasRows)
+            Database database1 = new Database();
+            command = new MySqlCommand(query, database1.connect);
+            command.Parameters.AddWithValue("@test", test);
+            database1.OpenConnection();
+            reader1 = command.ExecuteReader();
+            if (reader1.HasRows)
             {
                 res.Add("errors");
             }
             else
             {
-                reader.Close();
-                database.CloseConnection();
+                reader1.Close();
+                database1.CloseConnection();
                 query = "SELECT * FROM jira where `test` = @test and `type` = 'Задача' and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
-                command = new MySqlCommand(query, database.connect);
-                command.Parameters.AddWithValue("@test", mess.args[1]);
-                database.OpenConnection();
-                reader = command.ExecuteReader();
-                if (reader.HasRows)
+                command = new MySqlCommand(query, database1.connect);
+                command.Parameters.AddWithValue("@test", test);
+                database1.OpenConnection();
+                reader1 = command.ExecuteReader();
+                if (reader1.HasRows)
                 {
                     res.Add("issue");
                 }
@@ -1046,8 +1054,8 @@ namespace DashBoardServer
                     res.Add("no issue");
                 }
             }
-            reader.Close();
-            database.CloseConnection();
+            reader1.Close();
+            database1.CloseConnection();
         }
         public void CheckErrors(Message mess)
         {
@@ -1057,6 +1065,7 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@test", mess.args[1]);
             database.OpenConnection();
             reader = command.ExecuteReader();
+            Message issue = new Message();
             if (reader.HasRows)
             {
                 while (reader.Read())
@@ -1064,21 +1073,24 @@ namespace DashBoardServer
                     var issues = from i in jira.Issues.Queryable
                                  where i.Key == reader["link"].ToString()
                                  select i;
-
-                    query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
-                                   "WHERE `link` = @link";
-                    command = new MySqlCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@link", reader["link"].ToString());
-                    command.Parameters.AddWithValue("@status", issues.First().Status.Name);
-                    command.Parameters.AddWithValue("@name", issues.First().Summary);
-                    command.Parameters.AddWithValue("@type", issues.First().Type.Name);
-                    command.Parameters.AddWithValue("@executor", issues.First().Assignee);
-                    command.Parameters.AddWithValue("@data", issues.First().Created.Value.ToString());
-                    database.OpenConnection();
-                    var UpdateTest = command.ExecuteNonQuery();
+                    issue.Add(reader["link"].ToString(), issues.First().Status.Name, issues.First().Summary, issues.First().Type.Name, issues.First().Assignee, issues.First().Created.Value.ToString());
+                    break;
                 }
             }
             reader.Close();
+            query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
+                                  "WHERE `link` = @link";
+            if (issue.args.Count != 0)
+            {
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@link", issue.args[0]);
+                command.Parameters.AddWithValue("@status", issue.args[1]);
+                command.Parameters.AddWithValue("@name", issue.args[2]);
+                command.Parameters.AddWithValue("@type", issue.args[3]);
+                command.Parameters.AddWithValue("@executor", issue.args[4]);
+                command.Parameters.AddWithValue("@data", issue.args[5]);
+                var UpdateTest = command.ExecuteNonQuery();
+            }
             database.CloseConnection();
         }
         //-------------------------------------------------------------------------------------
@@ -1108,7 +1120,7 @@ namespace DashBoardServer
                     {
                         tests = JsonConvert.DeserializeObject<Message>(reader["test"].ToString());
                     }
-                }               
+                }
             }
             try
             {
@@ -1225,10 +1237,11 @@ namespace DashBoardServer
         public void AddStatisticDemon(Message mess)
         {
 
-            query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last'";
+            query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last' and `stend` = @stend";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@last", "no_last");
+            command.Parameters.AddWithValue("@stend", mess.args[10]);
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
@@ -1694,33 +1707,19 @@ namespace DashBoardServer
         {
             if (mess.args[1] != "no_version")
             {
-                query = "SELECT * FROM stends where `url` = @url and `version` = @version";
+
+                query = "UPDATE stends SET `version` = @version," +
+                "`data` = @data WHERE  `url` = @url";
                 command = new MySqlCommand(query, database.connect);
-                command.Parameters.AddWithValue("@url", mess.args[1]);
                 command.Parameters.AddWithValue("@version", mess.args[2]);
+                command.Parameters.AddWithValue("@data", mess.args[3]);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@url", mess.args[1]);
                 database.OpenConnection();
-                reader = command.ExecuteReader();
-                Message messeage = new Message();
-                if (reader.HasRows)
-                {
-                    while (reader.Read()) messeage.Add(
-                        reader["version"].ToString());
-                }
-                reader.Close();
+                var UpdateTest = command.ExecuteNonQuery();
                 database.CloseConnection();
-                if (messeage.args.Count == 0)
-                {
-                    query = "UPDATE stends SET `version` = @version," +
-                    "`data` = @data WHERE `service` = @service";
-                    command = new MySqlCommand(query, database.connect);
-                    command.Parameters.AddWithValue("@version", mess.args[2]);
-                    command.Parameters.AddWithValue("@data", mess.args[3]);
-                    command.Parameters.AddWithValue("@service", mess.args[0]);
-                    database.OpenConnection();
-                    var UpdateTest = command.ExecuteNonQuery();
-                    database.CloseConnection();
-                    logger.WriteLog("{0} update version", UpdateTest.ToString());
-                }
+                logger.WriteLog("{0} update version", UpdateTest.ToString());
+
             }
         }
         public void UpdateTestChange(Message mess)
@@ -1918,11 +1917,11 @@ namespace DashBoardServer
                             for (int j = 0; j < tests.id.Count; j++)
                             {
                                 query = "SELECT `path` FROM dirs WHERE `service` = @service AND `test` = @test";
-                                command = new MySqlCommand(query, database.connect);
-                                command.Parameters.AddWithValue("@service", mess.args[0]);
-                                command.Parameters.AddWithValue("@test", tests.id[j]);
-                                database.OpenConnection();
-                                reader1 = command.ExecuteReader();
+                                MySqlCommand command1 = new MySqlCommand(query, database1.connect);
+                                command1.Parameters.AddWithValue("@service", mess.args[0]);
+                                command1.Parameters.AddWithValue("@test", tests.id[j]);
+                                database1.OpenConnection();
+                                reader1 = command1.ExecuteReader();
                                 if (reader1.HasRows)
                                 {
                                     while (reader1.Read())
@@ -1931,7 +1930,7 @@ namespace DashBoardServer
                                     }
                                 }
                                 reader1.Close();
-                                //database1.CloseConnection();
+                                database1.CloseConnection();
                             }
                             request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), reader["ip"].ToString(), reader["time"].ToString(), JsonConvert.SerializeObject(tests), reader["browser"].ToString(), reader["count_restart"].ToString(), reader["stend"].ToString());
 
@@ -2162,13 +2161,36 @@ namespace DashBoardServer
         }
         public void ChangePositionTests(Message mess)
         {
+            int flag = 0;
             Message ids = JsonConvert.DeserializeObject<Message>(mess.args[1]);
-            for (int i = 0; i < ids.args.Count; i++)
+            for (int i = 2; i < ids.args.Count; i += 2)
             {
+                if (ids.args[i].Equals(ids.args[0]))
+                {
+                    flag = 1;
+
+                    query = "UPDATE tests SET `sort` = @sort WHERE `id` = @id AND `service` = @service";
+                    command = new MySqlCommand(query, database.connect);
+                    command.Parameters.AddWithValue("@id", ids.args[i]);
+                    command.Parameters.AddWithValue("@sort", ids.args[1]);
+                    command.Parameters.AddWithValue("@service", mess.args[0]);
+                    database.OpenConnection();
+                    var UpdateTest1 = command.ExecuteNonQuery();
+                    database.CloseConnection();
+                    continue;
+                }
+                if (flag == 0)
+                {
+                    ids.args[i + 1] = (Int32.Parse(ids.args[i + 1]) - 1) + "";
+                }
+                else
+                {
+                    ids.args[i + 1] = (Int32.Parse(ids.args[i + 1]) + 1) + "";
+                }
                 query = "UPDATE tests SET `sort` = @sort WHERE `id` = @id AND `service` = @service";
                 command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", ids.args[i]);
-                command.Parameters.AddWithValue("@sort", i + 1);
+                command.Parameters.AddWithValue("@sort", ids.args[i + 1]);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
 
                 database.OpenConnection();
@@ -2244,6 +2266,7 @@ namespace DashBoardServer
                         message.Add(mess.args[i], reader["ip"].ToString());
                     }
                 }
+                database.CloseConnection();
             }
             for (int i = 0; i < message.args.Count; i += 2)
             {

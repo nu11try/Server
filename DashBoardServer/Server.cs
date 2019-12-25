@@ -13,27 +13,32 @@ using MySql.Data.MySqlClient;
 
 namespace DashBoardServer
 {
+    static class Data
+    {
+        public static int Port { get; set; }
+        public static string IP { get; set; }
+        public static string[] TestsForStart { get; set; }
+    }
     class Server
     {
-        const int port = 8888;
+        //const int port = 8888;
         //const string ip = "172.31.197.89";
         //const string ip = "172.17.42.40";
         //const string ip = "172.31.197.232";
-        const string ip = "172.17.42.32";
+        //const string ip = "172.17.42.32";
         // const string ip = "127.0.0.1";
         //const string ip = "172.31.191.200";
-        static TcpListener listener;
-
-        static class Data
-        {
-            public static string[] TestsForStart { get; set; }
-        }
+        static TcpListener listener;        
 
         static void Main(string[] args)
         {
             try
             {
-                listener = new TcpListener(IPAddress.Parse(ip), port);
+                //Data.IP = "172.17.42.32";
+                Data.IP = "172.31.191.200";
+                Data.Port = 8888;
+
+                listener = new TcpListener(IPAddress.Parse(Data.IP), Data.Port);
                 listener.Start();
                 Console.WriteLine("===================================");
                 Console.WriteLine("Произведен запуск Asylum!");

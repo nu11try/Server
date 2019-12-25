@@ -66,14 +66,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="DashBoardServer.exe" size="96736">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="DashBoardServer.exe" size="97760">
       <assemblyIdentity name="DashBoardServer" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>KMfcoJevA7tLrqHfR5sxbj58XacleKaWjHV2Y7Vg7js=</dsig:DigestValue>
+        <dsig:DigestValue>KZmpkxoyhFEzBY028gTQsFZpBiwHrco8+eYnjXPI0fI=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
