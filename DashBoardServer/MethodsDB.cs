@@ -305,8 +305,9 @@ namespace DashBoardServer
         }
         public void GetStends(Message mess)
         {
-            query = "SELECT `url` FROM stends";
+            query = "SELECT `url` FROM stends WHERE `service` LIKE '"+ mess.args[0].Substring(0, 3) +"%'";
             command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0].Substring(0, 3));
             database.OpenConnection();
             reader = command.ExecuteReader();
 
@@ -1056,7 +1057,7 @@ namespace DashBoardServer
         }
         public void CheckErrors(Message mess)
         {
-            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648W");
+            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648Q");
             query = "SELECT `link` FROM jira";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
@@ -2267,13 +2268,22 @@ namespace DashBoardServer
             }
             for (int i = 0; i < message.args.Count; i += 2)
             {
+                query = "UPDATE autostart SET `status` = 'no_start' WHERE `packs` Like '%" + message.args[i] + "%'";
+                command = new MySqlCommand(query, database.connect);
+                database.OpenConnection();
+                var UpdateTest = command.ExecuteNonQuery();
+                database.CloseConnection();
+                logger.WriteLog("Обновлены статусы наборов! Произведена остановка набора " + message.args[i]);
+            }
+            for (int i = 0; i < message.args.Count; i += 2)
+            {
                 query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
                 command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", message.args[i]);
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
                 database.CloseConnection();
-                logger.WriteLog("Обновлены статусы наборов! Произведена остановка набора " + message.args[i]);
+                logger.WriteLog("Обновлены статусы автостартов!");
             }
             for (int i = 0; i < message.args.Count; i += 2)
             {
@@ -2303,7 +2313,7 @@ namespace DashBoardServer
                 }
 
             }
-
+            reader.Close();
         }
         public void GetPush(Message mess)
         {
@@ -2340,6 +2350,7 @@ namespace DashBoardServer
                     res.Add("no_pack");
                     break;
                 }
+                reader.Close();
             }
         }
         public Comments readTextOfTest(string service, string testId)
