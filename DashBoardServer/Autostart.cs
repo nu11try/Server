@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -34,7 +35,7 @@ namespace DashBoardServer
 
         }
 
-        public void Init(object Obj)
+        public void Init()
         {
             tm = new TimerCallback(CheckTime);
             timer = new Timer(tm, "", 1000, 60000);
@@ -80,8 +81,9 @@ namespace DashBoardServer
                         Console.WriteLine(autostart.time + "--" + date.Hour.ToString() + ":" + date.Minute.ToString() + "--" + autostart.time);
                         if (now >= time && now <= timeAfter && autostart.status == "no_start")
                         {
-                            Thread StartTests = new Thread(new ParameterizedThreadStart(startAuto));
-                            StartTests.Start(autostart);
+                            AutoStartTestTask(autostart, database.connect, database, methodsDB);
+                            //Thread StartTests = new Thread(new ParameterizedThreadStart(startAuto));
+                            //StartTests.Start(autostart);
                         }
                     }
                 });
@@ -90,27 +92,25 @@ namespace DashBoardServer
             {
                 Console.WriteLine("Пиздец тайм чекеру пришел!");
             }
-        }
-
-        public void startAuto(Object obj)
+        }        
+        static void startAuto(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)
         {
             try
             {
-                OptionsAutostart autostart = (OptionsAutostart)obj;
                 Message mess = JsonConvert.DeserializeObject<Message>(autostart.pack);
                 mess.args.Insert(0, autostart.service);
 
-                query = "UPDATE autostart SET `status` = 'start' WHERE `id` = @id";
-                command = new MySqlCommand(query, database.connect);
+                string query = "UPDATE autostart SET `status` = 'start' WHERE `id` = @id";
+                MySqlCommand command = new MySqlCommand(query, connection);
                 command.Parameters.AddWithValue("@id", autostart.id);
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
-                database.CloseConnection();
-                logger.WriteLog("Обновлен статус автозапуска! Произведен запуск " + autostart.id);
+                database.CloseConnection();                
                 methodsDB.StartTests(mess);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine("Ошибка = ", ex.Message);
                 Console.WriteLine("Вот и старт авто наебнулся!");
             }
         }
@@ -125,7 +125,10 @@ namespace DashBoardServer
             if (day.Equals("Sunday")) return "ВС";
             return null;
         }
-
+        static async void AutoStartTestTask(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)
+        {
+            await Task.Run(() => startAuto(autostart, connection, database, methodsDB));
+        }
         public int transform(string time, bool after)
         {
             int m = (Int32.Parse(time.Split(':')[0]) * 60 + Int32.Parse(time.Split(':')[1])) * 60000;

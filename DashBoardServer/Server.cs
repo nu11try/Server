@@ -10,6 +10,7 @@ using System.Data.SqlClient;
 using System.Data.Linq;
 using System.Data.SQLite;
 using MySql.Data.MySqlClient;
+using System.Diagnostics;
 
 namespace DashBoardServer
 {
@@ -34,8 +35,8 @@ namespace DashBoardServer
         {
             try
             {
-                //Data.IP = "172.17.42.32";
-                Data.IP = "172.31.191.200";
+                Data.IP = "172.17.42.32";
+                //Data.IP = "172.31.191.200";                
                 Data.Port = 8888;
 
                 listener = new TcpListener(IPAddress.Parse(Data.IP), Data.Port);
@@ -49,8 +50,7 @@ namespace DashBoardServer
                 try
                 {
                     Autostart autostart = new Autostart();
-                    Thread autoStartThread = new Thread(new ParameterizedThreadStart(autostart.Init));
-                    autoStartThread.Start();
+                    AutostartDemon(autostart);                    
                 }
                 catch (Exception ex)
                 {
@@ -63,8 +63,7 @@ namespace DashBoardServer
                     ClientObject clientObject = new ClientObject(client);
 
                     //создаем новый поток для обслуживания нового клиента
-                    Thread clientThread = new Thread(new ThreadStart(clientObject.Process));
-                    clientThread.Start();
+                    ConnectClient(clientObject);
                 }
             }
             catch (Exception ex)
@@ -76,6 +75,14 @@ namespace DashBoardServer
                 if (listener != null)
                     listener.Stop();
             }
+        }
+        static async void ConnectClient(ClientObject clientObject)
+        {
+            await Task.Run(()=> clientObject.Process());
+        }
+        static async void AutostartDemon(Autostart autostart)
+        {
+            await Task.Run(() => autostart.Init());
         }
     }
 }

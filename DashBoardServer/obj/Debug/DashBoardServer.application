@@ -7,14 +7,14 @@
     <framework targetVersion="4.7.2" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="DashBoardServer.exe.manifest" size="14370">
+    <dependentAssembly dependencyType="install" codebase="DashBoardServer.exe.manifest" size="14371">
       <assemblyIdentity name="DashBoardServer.exe" version="1.0.0.7" publicKeyToken="0000000000000000" language="ru" processorArchitecture="msil" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>0Xh14f8KdvBj2lS+0XiPHVaaNGTnj1xkhEExUK3eFwg=</dsig:DigestValue>
+        <dsig:DigestValue>Fwslj5V3t5sDOQJq6GbYr30UNm/1Oqx65qURVldZOHM=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
