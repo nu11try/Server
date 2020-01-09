@@ -1885,18 +1885,15 @@ namespace DashBoardServer
                                     tests = tests1;
                                 for (int j = 0; j < tests.id.Count; j++)
                                 {
-                                    query = "SELECT `path` FROM dirs WHERE `service` = @service AND `test` = @test";
+                                    query = "SELECT `path` FROM dirs WHERE `service` = @service";
                                     MySqlCommand command1 = new MySqlCommand(query, database1.connect);
                                     command1.Parameters.AddWithValue("@service", mess.args[0]);
-                                    command1.Parameters.AddWithValue("@test", tests.id[j]);
                                     database1.OpenConnection();
                                     reader1 = command1.ExecuteReader();
                                     if (reader1.HasRows)
                                     {
-                                        while (reader1.Read())
-                                        {
-                                            dirs.Add(reader1["path"].ToString());
-                                        }
+                                        reader1.Read();
+                                        dirs.Add(reader1["path"].ToString());
                                     }
                                     reader1.Close();
                                     database1.CloseConnection();
@@ -1989,9 +1986,10 @@ namespace DashBoardServer
         {
             database.OpenConnection();
             Tests te = new Tests();
-            query = "SELECT * FROM packs WHERE `id` = @id";
+            query = "SELECT * FROM packs WHERE `id` = @id AND `service` = @service";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -2225,9 +2223,10 @@ namespace DashBoardServer
             database.OpenConnection();
             Tests te;
             Tests tmp = new Tests();
-            query = "SELECT * FROM packs WHERE `id` = @id";
+            query = "SELECT * FROM packs WHERE `id` = @id  AND `service` = @service";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -2493,7 +2492,6 @@ namespace DashBoardServer
             duplicate.RemoveAt(i);
         }
     }
-
     public class Message
     {
         public Message()
@@ -2509,8 +2507,7 @@ namespace DashBoardServer
             }
         }
         public List<string> args { get; set; }
-    }
-
+    } 
     public class Comments
     {
         public Comments()
