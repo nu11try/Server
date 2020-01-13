@@ -222,7 +222,11 @@ namespace DashBoardServer
             //if (service == "ai") path = "Z:\\DEG_AI\\Tests";
             DirectoryInfo dir = new DirectoryInfo(path);
 
-            foreach (var item in dir.GetDirectories()) dirs.Add(item.ToString());
+            foreach (var item in dir.GetDirectories())
+            {
+                if (item.ToString().StartsWith("GUI"))
+                    dirs.Add(item.ToString());
+            }
 
             query = "SELECT * FROM tests WHERE `service` = @service order by sort";
             command = new MySqlCommand(query, database.connect);
@@ -341,7 +345,7 @@ namespace DashBoardServer
         public void GetTests(Message mess)
         {
             //GetTestsPath(mess);
-            query = "SELECT `id`, `name`, `author`, `sort` FROM tests WHERE `service` = @service AND `status` = @status order by `sort`";
+            query = "SELECT `id`, `name`, `author`, `sort` FROM tests WHERE `service` = @service AND `status` = @status and `id` LIKE 'GUI%' order by `sort` ";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             if (mess.args[1].Equals("no_add")) command.Parameters.AddWithValue("@status", "no_add");
@@ -1298,9 +1302,6 @@ namespace DashBoardServer
             Message param = new Message();
             param.Add(mess.args[0], mess.args[10], mess.args[9], mess.args[8]);
             UpdateVersion(param);
-            Message message = new Message();
-            message.Add(mess.args[1]);
-            UpdateStatusPack(message);
         }
         /// <summary>
         /// Функция добавления набора в БД
@@ -1827,7 +1828,7 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 command.Parameters.AddWithValue("@id_pack", mess.args[1]);
                 for (int i = 1; i < mess.args.Count; i++)
-                {                    
+                {
                     database.OpenConnection();
                     reader = command.ExecuteReader();
                     if (reader.HasRows)
@@ -1888,6 +1889,7 @@ namespace DashBoardServer
                                     query = "SELECT `path` FROM dirs WHERE `service` = @service";
                                     MySqlCommand command1 = new MySqlCommand(query, database1.connect);
                                     command1.Parameters.AddWithValue("@service", mess.args[0]);
+                                    command1.Parameters.AddWithValue("@test", tests.id[j]);
                                     database1.OpenConnection();
                                     reader1 = command1.ExecuteReader();
                                     if (reader1.HasRows)
@@ -1924,7 +1926,7 @@ namespace DashBoardServer
                 }
                 else res.Add("ERROR");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("Error " + ex.Message);
             }
@@ -1932,10 +1934,9 @@ namespace DashBoardServer
         public void UpdateStatusAutostart(Message mess)
         {
             query = "UPDATE autostart SET `status` = 'no_start' WHERE `status` = 'start' AND `service`= @service " +
-                "AND `id` = @id";
+                "AND `packs` Like '%" + mess.args[1] + "%'";
             command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@id", mess.args[0]);
-            command.Parameters.AddWithValue("@service", mess.args[1]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
