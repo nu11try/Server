@@ -454,12 +454,58 @@ namespace DashBoardServer
             reader = command.ExecuteReader();
             if (reader.HasRows)
             {
-                while (reader.Read()) res.Add(
-                    reader["id"].ToString(), reader["name"].ToString()
-                    , reader["tests"].ToString(), reader["time"].ToString()
-                    , reader["count_restart"].ToString()
-                    , reader["ip"].ToString()
-                    , reader["status"].ToString());
+                while (reader.Read())
+                {
+                    res.Add(reader["id"].ToString(), reader["name"].ToString()
+                        , reader["tests"].ToString(), reader["time"].ToString()
+                        , reader["count_restart"].ToString()
+                        , reader["ip"].ToString()
+                        , reader["status"].ToString());
+
+                    Message m = new Message();
+                    string time = "";
+                    Tests t = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
+                    int maxN = 0;
+                    t.id.ForEach(elem =>
+                    {
+                        Database database1 = new Database();
+                        string query1 = "SELECT * FROM statistic WHERE `service` = @service AND `id` = @id and `last` = 'last'";
+                        MySqlCommand command1 = new MySqlCommand(query1, database1.connect);
+                        command1.Parameters.AddWithValue("@service", mess.args[0]);
+                        command1.Parameters.AddWithValue("@id", elem);
+
+                        database1.OpenConnection();
+                        reader1 = command1.ExecuteReader();
+                        if (reader1.HasRows)
+                        {
+                            reader1.Read();
+                            m.Add(reader1["result"].ToString());
+                            if (Int32.Parse(reader1["key"].ToString()) > maxN)
+                            {
+                                maxN = Int32.Parse(reader1["key"].ToString());
+                                time = reader1["date"].ToString();
+                            }
+                        }
+                        reader1.Close();
+                        database1.CloseConnection();
+                    });
+                    if (m.args.Contains("Failed"))
+                    {
+                        res.Add("Failed");
+                    }
+                    else
+                    {
+                        if (m.args.Contains("Passed"))
+                        {
+                            res.Add("Passed");
+                        }
+                        else
+                        {
+                            res.Add("-");
+                        }
+                    }
+                    res.Add(time);
+                }
             }
             else
             {
@@ -547,7 +593,7 @@ namespace DashBoardServer
                 database.CloseConnection();
 
 
-                query = "SELECT * FROM statistic WHERE `service` = @service AND `id` = @id";
+                query = "SELECT * FROM statistic WHERE `service` = @service AND `id` = @id and `last` = 'last'";
                 string result = "";
                 string time = "";
                 command = new MySqlCommand(query, database.connect);
@@ -557,16 +603,14 @@ namespace DashBoardServer
                 reader = command.ExecuteReader();
                 if (reader.HasRows)
                 {
-                    while (reader.Read())
-                    {
-                        result = reader["result"].ToString();
-                        time = reader["time_end"].ToString();
-                    }
-                    res.Add(time, result);
+                    reader.Read();
+                    result = reader["result"].ToString();
+                    time = reader["time_end"].ToString();
+                    res.Add(time, result, reader["date"].ToString());
                 }
                 else
                 {
-                    res.Add("Нет данных", "Нет данных");
+                    res.Add("Нет данных", "Нет данных", "Нет данных");
                 }
                 reader.Close();
                 database.CloseConnection();
