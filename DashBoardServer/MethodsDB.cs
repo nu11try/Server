@@ -464,6 +464,7 @@ namespace DashBoardServer
 
                     Message m = new Message();
                     string time = "";
+                    string timeEnd = "";
                     Tests t = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
                     int maxN = 0;
                     t.id.ForEach(elem =>
@@ -484,6 +485,7 @@ namespace DashBoardServer
                             {
                                 maxN = Int32.Parse(reader1["key"].ToString());
                                 time = reader1["date"].ToString();
+                                timeEnd = reader1["dateEnd"].ToString();
                             }
                         }
                         reader1.Close();
@@ -505,6 +507,7 @@ namespace DashBoardServer
                         }
                     }
                     res.Add(time);
+                    res.Add(timeEnd);
                 }
             }
             else
@@ -606,17 +609,16 @@ namespace DashBoardServer
                     reader.Read();
                     result = reader["result"].ToString();
                     time = reader["time_end"].ToString();
-                    res.Add(time, result, reader["date"].ToString());
+                    res.Add(time, result, reader["date"].ToString(), reader["dateTestStart"].ToString(), reader["dateTestEnd"].ToString());
                 }
                 else
                 {
-                    res.Add("Нет данных", "Нет данных", "Нет данных");
+                    res.Add("Нет данных", "Нет данных", "Нет данных", "Нет данных", "Нет данных");
                 }
                 reader.Close();
                 database.CloseConnection();
 
             }
-
         }
         /// <summary>
         /// Функция получения дополнительных параметров о тесте
@@ -1025,7 +1027,7 @@ namespace DashBoardServer
             for (int i = 2; i < mess.args.Count; i++)
             {
                 Message message = new Message();
-                query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service and tests.service = @service AND statistic.stend = @stend and statistic.result = 'Passed' order by tests.sort";
+                query = "SELECT * FROM statistic LEFT JOIN tests ON statistic.id = tests.id WHERE statistic.service = @service and tests.service = @service AND statistic.stend = @stend and statistic.result = 'Passed' order by statistic.key";
                 command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@service", mess.args[i]);
                 command.Parameters.AddWithValue("@stend", mess.args[1]);
@@ -1041,10 +1043,11 @@ namespace DashBoardServer
                         if (reader["author"].ToString() == "")
                         {
                             query = "SELECT * FROM tests where id = @id and service = @service order by sort";
-                            MySqlCommand command1 = new MySqlCommand(query, database.connect);
+                            Database database1 = new Database();
+                            MySqlCommand command1 = new MySqlCommand(query, database1.connect);
                             command1.Parameters.AddWithValue("@service", mess.args[0]);
                             command1.Parameters.AddWithValue("@id", reader["id"].ToString().Split('(')[0]);
-                            database.OpenConnection();
+                            database1.OpenConnection();
                             reader1 = command1.ExecuteReader();
                             if (reader1.HasRows)
                             {
@@ -1052,6 +1055,7 @@ namespace DashBoardServer
                                 message.Add(reader1["author"].ToString());
                             }
                             reader1.Close();
+                            database1.CloseConnection();
                         }
                         else
                         {
@@ -1062,6 +1066,7 @@ namespace DashBoardServer
 
                     }
                 }
+                database.CloseConnection();
                 reader.Close();
             }
         }
@@ -1324,8 +1329,8 @@ namespace DashBoardServer
             database.CloseConnection();
 
             logger.WriteLog("{0} update test", UpdateTest.ToString());
-            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`, `last`)" +
-                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend, @last)";
+            query = "INSERT INTO statistic (`id`, `test`, `service`, `result`, `time_step`, `time_end`, `time_lose`, `steps`, `date`, `version`, `stend`, `last`, `dateEnd`, `dateTestStart`, `dateTestEnd` )" +
+                "VALUES (@id, @test, @service, @result, @time_step, @time_end, @time_lose, @steps, @date, @version, @stend, @last, @dateEnd, @dateTestStart, @dateTestEnd )";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@test", mess.args[2]);
@@ -1339,6 +1344,10 @@ namespace DashBoardServer
             command.Parameters.AddWithValue("@version", mess.args[9]);
             command.Parameters.AddWithValue("@stend", mess.args[10]);
             command.Parameters.AddWithValue("@last", "last");
+
+            command.Parameters.AddWithValue("@dateEnd", mess.args[11]);
+            command.Parameters.AddWithValue("@dateTestStart", mess.args[12]);
+            command.Parameters.AddWithValue("@dateTestEnd", mess.args[13]);
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
