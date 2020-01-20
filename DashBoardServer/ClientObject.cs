@@ -85,12 +85,11 @@ namespace DashBoardServer
                     bytesSent += curDataSize;
                     bytesLeft -= curDataSize;
                 }
-
                 File.Delete(AppDomain.CurrentDomain.BaseDirectory + nameText);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("Server = " + ex.Message);
             }
             finally
             {
