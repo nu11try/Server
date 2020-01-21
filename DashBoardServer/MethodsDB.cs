@@ -1738,6 +1738,16 @@ namespace DashBoardServer
                 database.CloseConnection();
             }
         }
+        public void DeleteKP(Message mess)
+        {
+            query = "DELETE FROM kp WHERE `service`= @service and `id` = @id";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+        }
         //-------------------------------------------------------------------------------------       
         // ФУНКЦИИ ОБНОВЛЕНИЯ
         //-------------------------------------------------------------------------------------
