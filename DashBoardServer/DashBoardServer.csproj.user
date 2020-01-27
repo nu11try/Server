@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <PublishUrlHistory>Z:\server\|publish\</PublishUrlHistory>
-    <InstallUrlHistory>\\172.31.197.220\atst\server\</InstallUrlHistory>
+    <PublishUrlHistory>ftp://172.31.191.200/demon/|Z:\server\|publish\</PublishUrlHistory>
+    <InstallUrlHistory>http://172.31.191.200/demon/|\\172.31.197.220\atst\server\</InstallUrlHistory>
     <SupportUrlHistory />
     <UpdateUrlHistory />
     <BootstrapperUrlHistory />

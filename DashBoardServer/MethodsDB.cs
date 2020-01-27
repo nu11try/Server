@@ -1570,6 +1570,16 @@ namespace DashBoardServer
                 database.CloseConnection();
             }
         }
+        public void DeleteAutostartNotOne(Message mess)
+        {
+            query = "DELETE FROM autostart WHERE `service`= @service AND `id` = @id LIMIT 1";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+        }
         public void DeleteTest(Message mess)
         {
             query = "DELETE FROM tests WHERE `service`= @service and `id` = @id";
@@ -2524,6 +2534,18 @@ namespace DashBoardServer
                 string s = JsonConvert.SerializeObject(message1);
                 stopPack.Start(s);
             }
+            res.Add("OK");
+        }
+        public void StopAutotest(Message mess)
+        {
+            query = "UPDATE autostart SET `status` = 'no_start' WHERE `id` = @id AND `service` = @service";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            database.OpenConnection();
+            var UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
+            logger.WriteLog("Обновлен статус автостарта! Произведена остановка автостарта " + mess.args[0]);
             res.Add("OK");
         }
         public void GetNowTests(Message mess)

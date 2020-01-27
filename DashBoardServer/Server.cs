@@ -59,7 +59,7 @@ namespace DashBoardServer
 
                 while (true)
                 {
-                    TcpClient client = listener.AcceptTcpClient();
+                    TcpClient client = listener.AcceptTcpClient();                    
                     ClientObject clientObject = new ClientObject(client);
 
                     //создаем новый поток для обслуживания нового клиента

@@ -57,6 +57,7 @@ namespace DashBoardServer
                         nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmssfff");
                     }
                 }
+
                 string buf = methodsDB.transformation(param);
 
                 nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhmmfffss");
