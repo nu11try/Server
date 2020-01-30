@@ -132,6 +132,7 @@
   <ItemGroup>
     <Compile Include="Autostart.cs" />
     <Compile Include="ClientObject.cs" />
+    <Compile Include="ConnectClient.cs" />
     <Compile Include="ConnectToDemon.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="FileSystem.cs" />

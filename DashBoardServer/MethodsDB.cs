@@ -20,7 +20,7 @@ namespace DashBoardServer
         private MySqlCommand command;
         private Logger logger = new Logger();
         private string query = "";
-        private static Message res = new Message();
+        private Message res = new Message();
 
         private MySqlDataReader reader;
         private MySqlDataReader reader1;
@@ -38,14 +38,16 @@ namespace DashBoardServer
             {
                 Message paramFun = JsonConvert.DeserializeObject<Message>(mess.args[1]);
                 if (!mess.args[0].Equals("")) paramFun.args.Insert(0, mess.args[0]);
-                info.Invoke(o, new object[] { paramFun });
+                res = (Message)info.Invoke(o, new object[] { paramFun });
             }
-            else info.Invoke(o, new object[] { mess });
+            else {
+                res = (Message)info.Invoke(o, new object[] { mess });
+            }
             string resS = JsonConvert.SerializeObject(res);
             res = new Message();
             return resS;
         }
-        public void Auth(Message mess)
+        public Message Auth(Message mess)
         {
             string login = mess.args[0];
             string password = mess.args[1];
@@ -79,8 +81,9 @@ namespace DashBoardServer
                 mess.args.RemoveAt(1);
                 GetAuth(mess);
             }
+            return res;
         }
-        public void GetAuth(Message mess)
+        public Message GetAuth(Message mess)
         {
             query = "SELECT * FROM auth_users inner join user on auth_users.login = user.login WHERE `ip` = @ip";
             command = new MySqlCommand(query, database.connect);
@@ -129,8 +132,9 @@ namespace DashBoardServer
             else res.Add("no");
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void ExitAuth(Message mess)
+        public Message ExitAuth(Message mess)
         {
             query = "DELETE FROM auth_users WHERE `ip`= @ip";
             command = new MySqlCommand(query, database.connect);
@@ -138,6 +142,54 @@ namespace DashBoardServer
             database.OpenConnection();
             res.Add(command.ExecuteNonQuery().ToString());
             database.CloseConnection();
+            return res;
+        }
+        public Message GetAllTests(Message mess)
+        {
+            query = "Select * FROM tests WHERE `status`= 'add' ";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    res.Add(reader["id"].ToString());
+                }
+            }
+            reader.Close();
+            database.CloseConnection();
+            return res;
+        }
+        public Message GetAllTime(Message mess)
+        {
+            query = "Select * FROM statistic WHERE `last`= 'last' ";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            int time = 0;
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    try
+                    {
+                        time += Int32.Parse(reader["time_end"].ToString());
+                    }
+                    catch
+                    {
+
+                    }
+                   
+                }
+                res.Add(time.ToString());
+            }
+
+            reader.Close();
+            database.CloseConnection();
+            return res;
         }
         //----------------------------------------------------------------------------------
         // ФУНКЦИИ ПОЛУЧЕНИЯ
@@ -162,7 +214,7 @@ namespace DashBoardServer
             database.CloseConnection();
             return result;
         }
-        public void GetDocSelect(Message mess)
+        public Message GetDocSelect(Message mess)
         {
             query = "SELECT `pim` FROM doc WHERE `service` = @service";
             command = new MySqlCommand(query, database.connect);
@@ -183,8 +235,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetKPSelect(Message mess)
+        public Message GetKPSelect(Message mess)
         {
             if (mess.args[1].Equals("all")) query = "SELECT `name` FROM kp WHERE `service` = @service";
             else query = "SELECT `name` FROM kp WHERE `service` = @service AND `id_doc` = @doc";
@@ -207,13 +260,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения название папок тестов (имя самих тестов) 
         /// </summary>
         /// <param name="service"> Сервис, на котором мы сидим </param>
         /// <returns></returns>
-        public void GetTestsPath(Message mess)
+        public Message GetTestsPath(Message mess)
         {
             string path = "";
             List<string> dirs = new List<string>();
@@ -286,13 +340,14 @@ namespace DashBoardServer
                 Console.WriteLine("{0} tests for return ", res.args.Count().ToString());
             }
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения ФИО автора
         /// </summary>
         /// <param name="service"> Сервис (так же будут выводиться авторы, у которых есть доступ ко всему) </param>
         /// <returns></returns>
-        public void GetAuthor(Message mess)
+        public Message GetAuthor(Message mess)
         {
             query = "SELECT `name` FROM authors WHERE `service` = @service OR `service` = 'all'";
             command = new MySqlCommand(query, database.connect);
@@ -306,8 +361,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetStends(Message mess)
+        public Message GetStends(Message mess)
         {
             query = "SELECT `url` FROM stends WHERE `service` LIKE '" + mess.args[0].Substring(0, 3) + "%'";
             command = new MySqlCommand(query, database.connect);
@@ -321,8 +377,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetVersion(Message mess)
+        public Message GetVersion(Message mess)
         {
             query = "SELECT `version`, `data` FROM stends WHERE `url` = @url";
             command = new MySqlCommand(query, database.connect);
@@ -336,13 +393,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения тестов определенного сервиса для отображения их в ListView
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetTests(Message mess)
+        public Message GetTests(Message mess)
         {
             //GetTestsPath(mess);
             query = "SELECT `id`, `name`, `author`, `sort` FROM tests WHERE `service` = @service AND `status` = @status and `id` LIKE 'GUI%' order by `sort` ";
@@ -423,13 +481,14 @@ namespace DashBoardServer
                 }
             }
             reader.Close();
+            return res;
         }
         /// <summary>
         /// Функция получения тестов набора
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetTestsForPack(Message mess)
+        public Message GetTestsForPack(Message mess)
         {
             query = "SELECT * FROM tests WHERE `service` = @service AND `status` = 'add' order by sort";
             command = new MySqlCommand(query, database.connect);
@@ -449,14 +508,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
-
+            return res;
         }
         /// <summary>
         /// Функция получения IP адреса демона
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetIPPc(Message mess)
+        public Message GetIPPc(Message mess)
         {
             query = "SELECT * FROM demons";
             command = new MySqlCommand(query, database.connect);
@@ -469,13 +528,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения наборов для последующего вывода в ListView
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetPacksForList(Message mess)
+        public Message GetPacksForList(Message mess)
         {
             query = "SELECT * FROM packs WHERE `service` = @service";
             command = new MySqlCommand(query, database.connect);
@@ -546,7 +606,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
-
+            return res;
         }
         /// <summary>
         /// Функция получения данных по определенному набору
@@ -554,7 +614,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="ID"></param>
         /// <returns></returns>
-        public void GetPackChange(Message mess)
+        public Message GetPackChange(Message mess)
         {
             query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -575,6 +635,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения тестов для обпереденного набора
@@ -582,7 +643,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetTestsThisPack(Message mess)
+        public Message GetTestsThisPack(Message mess)
         {
             Tests testsPack = new Tests();
             query = "SELECT `tests` FROM packs WHERE `service` = @service AND `id` = @id";
@@ -649,6 +710,7 @@ namespace DashBoardServer
                 database.CloseConnection();
 
             }
+            return res;
         }
         /// <summary>
         /// Функция получения дополнительных параметров о тесте
@@ -656,7 +718,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetTestPerform(Message mess)
+        public Message GetTestPerform(Message mess)
         {
             string id = mess.args[1];
             string id_pack = mess.args[2];
@@ -690,6 +752,7 @@ namespace DashBoardServer
             reader.Close();
             database.CloseConnection();
             // res.Add(argsS);
+            return res;
         }
         /// <summary>
         /// Функция получения результатов теста
@@ -697,7 +760,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <returns></returns>
         /// 
-        public void GetPathToResult(Message mess)
+        public Message GetPathToResult(Message mess)
         {
             query = "SELECT `path` FROM service WHERE `name` = @name";
             command = new MySqlCommand(query, database.connect);
@@ -712,8 +775,9 @@ namespace DashBoardServer
             else res.Add("no");
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetTestResult(Message mess)
+        public Message GetTestResult(Message mess)
         {
             try
             {
@@ -769,8 +833,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetTestResultVersion(Message mess)
+        public Message GetTestResultVersion(Message mess)
         {
             query = "SELECT * FROM statistic where `service` = @service and `version` = @version and `id` = @id and (`result`= 'Passed' or `result` = 'Warning')";
             command = new MySqlCommand(query, database.connect);
@@ -786,8 +851,9 @@ namespace DashBoardServer
                     res.Add(reader["result"].ToString());
                 }
             }
+            return res;
         }
-        public void GetVersions(Message mess)
+        public Message GetVersions(Message mess)
         {//message.args[i] + "\n" + message.args[i + 5].Replace(".", ":").Replace("_", "__"))
             query = "SELECT * FROM statistic where service = @service and stend = @stend order by statistic.key desc";
             command = new MySqlCommand(query, database.connect);
@@ -797,10 +863,34 @@ namespace DashBoardServer
             reader = command.ExecuteReader();
             if (reader.HasRows)
             {
+                
                 while (reader.Read())
                 {
-                    if (!res.args.Contains(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__")))
-                        res.Add(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__"));
+                    string date1 = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
+                    string date = reader["date"].ToString();
+                    int day = Int32.Parse(date.Split(' ')[0]);
+                    string mounthS = date.Split(' ')[1];
+                    int day1 = Int32.Parse(date1.Split(' ')[0]);
+                    string mounthS1 = date1.Split(' ')[1];
+                    if ((mounthS == mounthS1 && (day1 - day) <= 5))
+                    {
+                        if (!res.args.Contains(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__")))
+                            res.Add(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__"));
+                    }
+                    else
+                    {
+                        DateTime date2 = DateTime.Now;
+                        date2 = date2.AddMonths(-1);
+                        date1 = date2.ToString("dd MMMM yyyy | HH:mm:ss");
+                        day1 = Int32.Parse(date1.Split(' ')[0]);
+                        mounthS1 = date1.Split(' ')[1];
+                        if ((mounthS == mounthS1 && (day1 - day + 30) <= 5))
+                        {
+                            if (!res.args.Contains(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__")))
+                                res.Add(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__"));
+                        }
+                    }
+                    
                 }
             }
             else
@@ -809,13 +899,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получение подробной информации по результату теста
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetTestResultInfo(Message mess)
+        public Message GetTestResultInfo(Message mess)
         {
             query = "SELECT * FROM statistic inner join tests on statistic.id = tests.id WHERE statistic.service = @service AND statistic.stend = @stend and tests.service = @service ORDER BY tests.sort, statistic.key desc";
             command = new MySqlCommand(query, database.connect);
@@ -825,10 +916,33 @@ namespace DashBoardServer
             reader = command.ExecuteReader();
             if (reader.HasRows)
             {
+                
                 while (reader.Read())
                 {
-                    res.Add(reader["date"].ToString(), reader["result"].ToString(),
-                        reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
+                    string date1 = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
+                    string date = reader["date"].ToString();
+                    int day = Int32.Parse(date.Split(' ')[0]);
+                    string mounthS = date.Split(' ')[1];
+                    int day1 = Int32.Parse(date1.Split(' ')[0]);
+                    string mounthS1 = date1.Split(' ')[1];
+                    if ((mounthS == mounthS1 && (day1 - day) <= 5) )
+                    {
+                            res.Add(reader["date"].ToString(), reader["result"].ToString(),
+                                reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
+                    }
+                    else
+                    {
+                        DateTime date2 = DateTime.Now;
+                        date2 = date2.AddMonths(-1);
+                        date1 = date2.ToString("dd MMMM yyyy | HH:mm:ss");
+                        day1 = Int32.Parse(date1.Split(' ')[0]);
+                        mounthS1 = date1.Split(' ')[1];
+                        if ((mounthS == mounthS1 && (day1 - day + 30) <= 5))
+                        {
+                            res.Add(reader["date"].ToString(), reader["result"].ToString(),
+                                reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
+                        }
+                    }
                 }
             }
             else
@@ -837,13 +951,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения документа
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetDocument(Message mess)
+        public Message GetDocument(Message mess)
         {
             query = "SELECT `id`, `pim`, `date` FROM doc WHERE `service` = @service order by service, sort";
             command = new MySqlCommand(query, database.connect);
@@ -864,6 +979,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения информации по документу
@@ -871,7 +987,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetDocInfo(Message mess)
+        public Message GetDocInfo(Message mess)
         {
             query = "SELECT * FROM doc WHERE `service` = @service AND `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -890,7 +1006,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
-
+            return res;
         }
         /// <summary>
         /// Функция получения КП для документа
@@ -898,7 +1014,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetKPForDoc(Message mess)
+        public Message GetKPForDoc(Message mess)
         {
             query = "SELECT * FROM kp WHERE `service` = @service AND `id_doc` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -919,6 +1035,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения информации по КП
@@ -926,7 +1043,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetKPInfo(Message mess)
+        public Message GetKPInfo(Message mess)
         {
             string id_doc = mess.args[1].Equals("") ? "" : "AND `id_doc` = @id_doc ";
             string id_kp = mess.args[2].Equals("") ? "" : "AND `id` = @id_kp ";
@@ -950,6 +1067,7 @@ namespace DashBoardServer
                 }
             }
             reader.Close();
+
             /*
             int index = 0;
             int index_insert = 4;
@@ -976,13 +1094,14 @@ namespace DashBoardServer
             }*/
             if (res.args.Count == 0) res.Add("error");
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения автостарта
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
-        public void GetAutostart(Message mess)
+        public Message GetAutostart(Message mess)
         {
 
             query = "SELECT * FROM autostart WHERE `service` = @service";
@@ -1026,6 +1145,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения информации по автостарту
@@ -1033,7 +1153,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetAutostartInfo(Message mess)
+        public Message GetAutostartInfo(Message mess)
         {
             query = "SELECT * FROM autostart WHERE `service` = @service AND `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -1054,6 +1174,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения комментария
@@ -1061,7 +1182,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="id"></param>
         /// <returns></returns>
-        public void GetCommnents(Message mess)
+        public Message GetCommnents(Message mess)
         {
             query = "SELECT `comments` FROM tests WHERE `service` = @service AND `id` = @id_test order by sort";
             command = new MySqlCommand(query, database.connect);
@@ -1079,8 +1200,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetCharts(Message mess)
+        public Message GetCharts(Message mess)
         {
 
             for (int i = 2; i < mess.args.Count; i++)
@@ -1128,8 +1250,9 @@ namespace DashBoardServer
                 database.CloseConnection();
                 reader.Close();
             }
+            return res;
         }
-        public void GetErrors(Message mess)
+        public Message GetErrors(Message mess)
         {
             query = "SELECT * FROM jira where `test` = @test";
             command = new MySqlCommand(query, database.connect);
@@ -1146,8 +1269,9 @@ namespace DashBoardServer
 
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void GetErrorsStatus(string test)
+        public Message GetErrorsStatus(string test)
         {
             query = "SELECT * FROM jira where `test` = @test and (`type` = 'Ошибка' or `type` = 'Доработка' or `type` = 'Компонентная доработка') and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
             Database database1 = new Database();
@@ -1179,13 +1303,15 @@ namespace DashBoardServer
             }
             reader1.Close();
             database1.CloseConnection();
+            return res;
         }
-        public void CheckErrors(Message mess)
+        public Message CheckErrors(Message mess)
         {
             Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648Q");
-            query = "SELECT `link` FROM jira";
+            query = "SELECT `link` FROM jira where `service` = @service group by `link`";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
             reader = command.ExecuteReader();
             Message issue = new Message();
@@ -1197,24 +1323,24 @@ namespace DashBoardServer
                                  where i.Key == reader["link"].ToString()
                                  select i;
                     issue.Add(reader["link"].ToString(), issues.First().Status.Name, issues.First().Summary, issues.First().Type.Name, issues.First().Assignee, issues.First().Created.Value.ToString());
-                    break;
                 }
             }
             reader.Close();
             query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
                                   "WHERE `link` = @link";
-            if (issue.args.Count != 0)
+            for (int i = 0; i < issue.args.Count; i += 6)
             {
                 command = new MySqlCommand(query, database.connect);
-                command.Parameters.AddWithValue("@link", issue.args[0]);
-                command.Parameters.AddWithValue("@status", issue.args[1]);
-                command.Parameters.AddWithValue("@name", issue.args[2]);
-                command.Parameters.AddWithValue("@type", issue.args[3]);
-                command.Parameters.AddWithValue("@executor", issue.args[4]);
-                command.Parameters.AddWithValue("@data", issue.args[5]);
+                command.Parameters.AddWithValue("@link", issue.args[i]);
+                command.Parameters.AddWithValue("@status", issue.args[i + 1]);
+                command.Parameters.AddWithValue("@name", issue.args[i + 2]);
+                command.Parameters.AddWithValue("@type", issue.args[i + 3]);
+                command.Parameters.AddWithValue("@executor", issue.args[i + 4]);
+                command.Parameters.AddWithValue("@data", issue.args[i + 5]);
                 var UpdateTest = command.ExecuteNonQuery();
             }
             database.CloseConnection();
+            return res;
         }
         //-------------------------------------------------------------------------------------
         // ФУНКЦИИ ДОБАВЛЕНИЯ
@@ -1225,7 +1351,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public void AddTechTest(Message mess)
+        public Message AddTechTest(Message mess)
         {
             UpdateStatusTest(mess);
             Message tests = new Message();
@@ -1286,8 +1412,9 @@ namespace DashBoardServer
                 logger.WriteLog(InsertTesult.ToString() + " create kp");
             }
             res.Add("OK");
+            return res;
         }
-        public void AddTest(Message mess)
+        public Message AddTest(Message mess)
         {
             Message tests = new Message();
             int step = 0;
@@ -1334,6 +1461,7 @@ namespace DashBoardServer
             database.CloseConnection();
 
             res.Add("OK");
+            return res;
         }
         /// <summary>
         /// Функция добавления документа
@@ -1341,7 +1469,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public void AddDoc(Message param)
+        public Message AddDoc(Message param)
         {
             query = "SELECT `id` FROM doc WHERE `service` = @service AND `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -1355,7 +1483,7 @@ namespace DashBoardServer
                 reader.Close();
                 database.CloseConnection();
 
-                return;
+                return res;
             }
             reader.Close();
             database.CloseConnection();
@@ -1374,15 +1502,91 @@ namespace DashBoardServer
             logger.WriteLog(InsertTesult.ToString() + " create doc");
 
             res.Add("OK");
+            return res;
         }
-        public void AddStatisticDemon(Message mess)
+        public Message AddSession(Message mess)
         {
 
-            query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last' and `stend` = @stend";
+            query = "SELECT * FROM user WHERE `name` = @name";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@name", mess.args[0]);
+            string message = "";
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                    message = reader["showProjects"].ToString();
+            }
+            reader.Close();
+            database.CloseConnection();
+           
+
+            query = "INSERT INTO session (`id`,`ip`,`service`)"
+                + "VALUES (@id,@ip, @service)";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@ip", mess.args[1]);
+            string id = DateTime.Now.ToString("ddMMhhmmssfff");
+            command.Parameters.AddWithValue("@id", id);
+            command.Parameters.AddWithValue("@service", message);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+
+            res.Add(id);
+            return res;
+        }
+        public Message DeleteSession(Message mess)
+        {
+
+
+            query = "DELETE FROM session WHERE id = @id";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[0]);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+
+
+            res.Add("OK");
+            return res;
+        }
+        public Message UpdateSession(Message mess)
+        {
+            query = "SELECT * FROM user WHERE `name` = @name";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@name", mess.args[0]);
+            string message = "";
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                    message = reader["showProjects"].ToString();
+            }
+            reader.Close();
+            database.CloseConnection();
+
+            query = "UPDATE session SET `service` = @service where id = @id";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            command.Parameters.AddWithValue("@service", message);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+
+            res.Add("OK");
+            return res;
+        }
+        public Message AddStatisticDemon(Message mess)
+        {
+
+
+            query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last' and `service` = @service";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
             command.Parameters.AddWithValue("@last", "no_last");
-            command.Parameters.AddWithValue("@stend", mess.args[10]);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
@@ -1414,6 +1618,7 @@ namespace DashBoardServer
             Message param = new Message();
             param.Add(mess.args[0], mess.args[10], mess.args[9], mess.args[8]);
             UpdateVersion(param);
+            return res;
         }
         /// <summary>
         /// Функция добавления набора в БД
@@ -1421,7 +1626,7 @@ namespace DashBoardServer
         /// <param name="service"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public void AddPack(Message mess)
+        public Message AddPack(Message mess)
         {
             Message tests = JsonConvert.DeserializeObject<Message>(mess.args[2]);
             Tests te = new Tests();
@@ -1468,8 +1673,9 @@ namespace DashBoardServer
                 logger.WriteLog("{0} update test", UpdateTest.ToString());
             }
             res.Add("OK");
+            return res;
         }
-        public void AddKP(Message mess)
+        public Message AddKP(Message mess)
         {
             query = "INSERT INTO kp (`id`, `name`, `steps`, `author`, `date`, `id_doc`" +
                 ", `service`,`test`)"
@@ -1489,8 +1695,9 @@ namespace DashBoardServer
             logger.WriteLog(InsertTesult.ToString() + " create kp");
 
             res.Add("OK");
+            return res;
         }
-        public void AddAutostart(Message mess)
+        public Message AddAutostart(Message mess)
         {
             query = "INSERT INTO autostart (`id`, `name`, `days`, `service`, `time`, `packs`, `type`)"
                 + "VALUES (@id_auto, @Name, @Days, @Service, @Time, @Packs, @Type)";
@@ -1508,8 +1715,9 @@ namespace DashBoardServer
             logger.WriteLog(InsertTesult.ToString() + " create auto");
 
             res.Add("OK");
+            return res;
         }
-        public void AddBug(Message mess)
+        public Message AddBug(Message mess)
         {
             List<string> tests = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service";
@@ -1546,19 +1754,48 @@ namespace DashBoardServer
             tests.Add(mess.args[1]);
             for (int i = 0; i < tests.Count; i++)
             {
-                query = "INSERT INTO jira (`test`, `link`,`status`)"
-                + "VALUES (@test, @link, 'В работе')";
+                query = "INSERT INTO jira (`test`, `link`,`status`,`service`)"
+                + "VALUES (@test, @link, 'В работе', @service)";
                 command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@test", tests[i]);
                 command.Parameters.AddWithValue("@link", mess.args[2]);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
                 database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
                 database.CloseConnection();
                 logger.WriteLog(InsertTesult.ToString() + " create bug");
             }
             res.Add("OK");
+
+
+            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648Q");
+            
+            Message issue = new Message();
+            
+            var issues = from i in jira.Issues.Queryable
+                            where i.Key == mess.args[2]
+                         select i;
+            issue.Add(mess.args[2], issues.First().Status.Name, issues.First().Summary, issues.First().Type.Name, issues.First().Assignee, issues.First().Created.Value.ToString());
+
+            reader.Close();
+            query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
+                                  "WHERE `link` = @link";
+            database.OpenConnection();
+            for (int i = 0; i < issue.args.Count; i += 6)
+            {
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@link", issue.args[i]);
+                command.Parameters.AddWithValue("@status", issue.args[i + 1]);
+                command.Parameters.AddWithValue("@name", issue.args[i + 2]);
+                command.Parameters.AddWithValue("@type", issue.args[i + 3]);
+                command.Parameters.AddWithValue("@executor", issue.args[i + 4]);
+                command.Parameters.AddWithValue("@data", issue.args[i + 5]);
+                var UpdateTest = command.ExecuteNonQuery();
+            }
+            database.CloseConnection();
+            return res;
         }
-        public void DeleteAutostart(Message mess)
+        public Message DeleteAutostart(Message mess)
         {
             foreach (var id in mess.args)
             {
@@ -1569,8 +1806,9 @@ namespace DashBoardServer
                 command.ExecuteNonQuery();
                 database.CloseConnection();
             }
+            return res;
         }
-        public void DeleteAutostartNotOne(Message mess)
+        public Message DeleteAutostartNotOne(Message mess)
         {
             query = "DELETE FROM autostart WHERE `service`= @service AND `id` = @id LIMIT 1";
             command = new MySqlCommand(query, database.connect);
@@ -1579,8 +1817,9 @@ namespace DashBoardServer
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
+            return res;
         }
-        public void DeleteTest(Message mess)
+        public Message DeleteTest(Message mess)
         {
             query = "DELETE FROM tests WHERE `service`= @service and `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -1664,8 +1903,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void DeletePack(Message mess)
+        public Message DeletePack(Message mess)
         {
             query = "DELETE FROM packs WHERE `service`= @service and `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -1701,8 +1941,9 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
-        public void DeleteBug(Message mess)
+        public Message DeleteBug(Message mess)
         {
             List<string> tests = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service";
@@ -1747,8 +1988,9 @@ namespace DashBoardServer
                 command.ExecuteNonQuery();
                 database.CloseConnection();
             }
+            return res;
         }
-        public void DeleteKP(Message mess)
+        public Message DeleteKP(Message mess)
         {
             query = "DELETE FROM kp WHERE `service`= @service and `id` = @id";
             command = new MySqlCommand(query, database.connect);
@@ -1757,25 +1999,179 @@ namespace DashBoardServer
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
+            return res;
         }
         //-------------------------------------------------------------------------------------       
         // ФУНКЦИИ ОБНОВЛЕНИЯ
         //-------------------------------------------------------------------------------------
-        public void updateTestsNow(Message mess)
+        public Message updateTestsNow(Message mess)
         {
-            query = "UPDATE demons SET `service` = @service, `id` = @id, `date` = @date WHERE `ip` = @ip";
+
+            query = "SELECT * FROM demons WHERE  `ip`= @ip";
             command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            command.Parameters.AddWithValue("@id", mess.args[2]);
             command.Parameters.AddWithValue("@ip", mess.args[1]);
-            command.Parameters.AddWithValue("@date", mess.args[3]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            string service = "";
+            Message test = new Message();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    service = reader["service"].ToString();
+                    test.Add(reader["id"].ToString());
+                }
+            }
+            reader.Close();
+            database.CloseConnection();
+
+            query = "SELECT * FROM statistic WHERE  `id`= @id and `last` = 'last'";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@id", test.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    test.Add(reader["result"].ToString());
+                }
+            }
+            reader.Close();
+            database.CloseConnection();
+
+            DateTime time = DateTime.Now;
+            int sec = time.DayOfYear * 24 * 60 * 60 + time.Hour * 60 * 60 + time.Minute * 60 + time.Second;
+
+            if (mess.args[0] == "-")
+            {
+                query = "UPDATE demons SET  `id` = @id, `date` = @date WHERE `ip` = @ip";
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", mess.args[2]);
+                command.Parameters.AddWithValue("@ip", mess.args[1]);
+                command.Parameters.AddWithValue("@date",  ""+ sec);
+            }
+            else
+            {
+                query = "UPDATE demons SET `service` = @service, `id` = @id, `date` = @date WHERE `ip` = @ip";
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@id", mess.args[2]);
+                command.Parameters.AddWithValue("@ip", mess.args[1]);
+                command.Parameters.AddWithValue("@date", "" + sec);
+            }
+            database.OpenConnection();
+            var UpdateTest = command.ExecuteNonQuery();
+            database.CloseConnection();
+
+           
+
+            Message message = new Message();
+            time = DateTime.Now;
+            sec = time.DayOfYear * 24 * 60 * 60 + time.Hour * 60 * 60 + time.Minute * 60 + time.Second;
+            query = "SELECT * FROM demons WHERE `service` = @service and `id`!= 'not'";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", service);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                    message.Add(reader["id"].ToString(), (sec - Int32.Parse(reader["date"].ToString())).ToString(), reader["ip"].ToString());
+            }
+            reader.Close();
+            database.CloseConnection();
+
+            
+            
+
+            ConnectClient connect = new ConnectClient();
+            query = "SELECT * FROM session ";
+            command = new MySqlCommand(query, database.connect);
+           
+            command.Parameters.AddWithValue("@id", mess.args[1]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                string me = JsonConvert.SerializeObject(message);
+                string met = JsonConvert.SerializeObject(test);
+                while (reader.Read())
+                {
+                    try
+                    {
+                        string s = reader["service"].ToString();
+                        Message servises = JsonConvert.DeserializeObject<Message>(reader["service"].ToString());
+                        if (servises.args.Contains(service))
+                        {
+                            connect.SendMsg("TestsNow", reader["ip"].ToString(), me);
+                            connect.SendMsg("Push", reader["ip"].ToString(), met);
+                        }
+                    }
+                    catch { }
+                }
+            }
+            reader.Close();
+            database.CloseConnection();
+            return res;
+        }
+        public Message UpdateServises(Message mess)
+        {
+            string name = mess.args[1];
+            mess.args.RemoveAt(0);
+            mess.args.RemoveAt(0);
+
+            query = "UPDATE user SET  `showProjects` = @show WHERE `name` = @name";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@show", JsonConvert.SerializeObject(mess));
+            command.Parameters.AddWithValue("@name", name);
 
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
-            logger.WriteLog("{0} update test", UpdateTest.ToString());
+            return res;
         }
-        public void UpdateTest(Message mess)
+        public Message ShowServises(Message mess)
+        {
+
+
+            query = "SELECT * FROM user WHERE `name` = @name";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@name", mess.args[1]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                    res.Add(reader["showProjects"].ToString());
+            }
+            reader.Close();
+            database.CloseConnection();
+            return res;
+        }
+        public Message CheckNowTests(Message mess)
+        {
+            Message message = new Message();
+            query = "SELECT * FROM demons WHERE `service` = @service and `id`!= 'not'";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                DateTime time = DateTime.Now;
+               int sec = time.DayOfYear * 24 * 60 * 60 + time.Hour * 60 * 60 + time.Minute * 60 + time.Second;
+                while (reader.Read())
+                    res.Add(reader["id"].ToString(), (sec - Int32.Parse(reader["date"].ToString())).ToString(), reader["ip"].ToString());
+            }
+            reader.Close();
+            database.CloseConnection();
+
+
+       
+            return res;
+        }
+        public Message UpdateTest(Message mess)
         {
             Comments comments = readTextOfTest(mess.args[0], mess.args[1]);
             string name = comments.comment[0];
@@ -1870,8 +2266,9 @@ namespace DashBoardServer
             UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
             res.Add("OK");
+            return res;
         }
-        public void UpdateVersion(Message mess)
+        public Message UpdateVersion(Message mess)
         {
             if (mess.args[1] != "no_version")
             {
@@ -1889,8 +2286,9 @@ namespace DashBoardServer
                 logger.WriteLog("{0} update version", UpdateTest.ToString());
 
             }
+            return res;
         }
-        public void UpdateTestChange(Message mess)
+        public Message UpdateTestChange(Message mess)
         {
             query = "SELECT * FROM tests WHERE `service` = @service AND `id` = @id order by sort";
             command = new MySqlCommand(query, database.connect);
@@ -1909,6 +2307,7 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
+            return res;
         }
         /// <summary>
         /// Функция получения данных по набору для его редактирования
@@ -1916,7 +2315,7 @@ namespace DashBoardServer
         /// <param name="service"> сервис </param>
         /// <param name="ID"> ID набора </param>
         /// <returns></returns>
-        public void UpdatePackChange(Message mess)
+        public Message UpdatePackChange(Message mess)
         {
             query = "UPDATE packs SET `name` = @newname,`time` = @time, `count_restart` = @restart, `ip` = @ip, " +
                 "`tests` = @tests, `browser` = @browser ,`stend` = @stend WHERE `id` = @id_pack AND `service` = @service";
@@ -1965,8 +2364,9 @@ namespace DashBoardServer
             }
             logger.WriteLog("{0} update pack", UpdateTest.ToString());
             res.Add("OK");
+            return res;
         }
-        public void UpdateDoc(Message mess)
+        public Message UpdateDoc(Message mess)
         {
             query = "SELECT `pim` FROM doc WHERE `service` = @service AND `pim` = @pim";
             command = new MySqlCommand(query, database.connect);
@@ -1980,7 +2380,7 @@ namespace DashBoardServer
                 reader.Close();
                 database.CloseConnection();
 
-                return;
+                return res;
             }
             reader.Close();
             database.CloseConnection();
@@ -1999,8 +2399,9 @@ namespace DashBoardServer
             logger.WriteLog("{0} update doc", UpdateTest.ToString());
 
             res.Add("OK");
+            return res;
         }
-        public void UpdateKP(Message mess)
+        public Message UpdateKP(Message mess)
         {
             query = "UPDATE kp SET `name` = @name, " +
                 "`date` = @date, `author` = @author WHERE `id` = @id_kp AND `service` = @service";
@@ -2017,8 +2418,9 @@ namespace DashBoardServer
             logger.WriteLog("{0} update kp", UpdateTest.ToString());
 
             res.Add("OK");
+            return res;
         }
-        public void StartTests(Message mess)
+        public Message StartTests(Message mess)
         {
             try
             {
@@ -2057,7 +2459,7 @@ namespace DashBoardServer
                                 reader.Close();
                                 database.CloseConnection();
                                 res.Add("START");
-                                return;
+                                return res;
                             }
                         }
                     }
@@ -2147,8 +2549,9 @@ namespace DashBoardServer
             {
                 Console.WriteLine("Error " + ex.Message);
             }
+            return res;
         }
-        public void UpdateStatusAutostart(Message mess)
+        public Message UpdateStatusAutostart(Message mess)
         {
             query = "UPDATE autostart SET `status` = 'no_start' WHERE `status` = 'start' AND `service`= @service " +
                 "AND `packs` Like '%" + mess.args[1] + "%'";
@@ -2157,8 +2560,9 @@ namespace DashBoardServer
             database.OpenConnection();
             command.ExecuteNonQuery();
             database.CloseConnection();
+            return res;
         }
-        public void UpdateStatusTest(Message mess)
+        public Message UpdateStatusTest(Message mess)
         {
             Message tests = new Message();
             int step = 0;
@@ -2187,8 +2591,9 @@ namespace DashBoardServer
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
+            return res;
         }
-        public void UpdateStatusPack(Message mess)
+        public Message UpdateStatusPack(Message mess)
         {
             foreach (var id in mess.args)
             {
@@ -2199,8 +2604,9 @@ namespace DashBoardServer
                 command.ExecuteNonQuery();
                 database.CloseConnection();
             }
+            return res;//
         }
-        public void UpdateTestOfPack(Message mess)
+        public Message UpdateTestOfPack(Message mess)
         {
             database.OpenConnection();
             Tests te = new Tests();
@@ -2240,8 +2646,9 @@ namespace DashBoardServer
             logger.WriteLog("{0} update test", UpdateTest.ToString());
 
             res.Add("ok");
+            return res;
         }
-        public void UpdateDuplicate(Message mess)
+        public Message UpdateDuplicate(Message mess)
         {
             Tests tests = new Tests();
             if (mess.args[3] == "add")
@@ -2329,9 +2736,9 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog(InsertTesult.ToString() + " update testsInPack");
             res.Add("OK");
-
+            return res;
         }
-        public void UpdateAutostart(Message mess)
+        public Message UpdateAutostart(Message mess)
         {
             query = "UPDATE autostart SET `name` = @name, `days` = @days, `time` = @time, `packs` = @packs, `type` = @type WHERE `id` = @id AND `service` = @service";
             command = new MySqlCommand(query, database.connect);
@@ -2348,8 +2755,9 @@ namespace DashBoardServer
             logger.WriteLog(InsertTesult.ToString() + " update auto");
 
             res.Add("OK");
+            return res;
         }
-        public void ChangePositionTests(Message mess)
+        public Message ChangePositionTests(Message mess)
         {
             query = "SELECT * FROM doc WHERE `id` = @id and `service` = @service";
             command = new MySqlCommand(query, database.connect);
@@ -2378,8 +2786,9 @@ namespace DashBoardServer
                 database.CloseConnection();
 
             }
+            return res;
         }
-        public void ChangePositionDoc(Message mess)
+        public Message ChangePositionDoc(Message mess)
         {
             for (int i = 1; i < mess.args.Count; i++)
             {
@@ -2434,8 +2843,9 @@ namespace DashBoardServer
 
                 ChangePositionTests(message);
             }
+            return res;
         }
-        public void ChangePositionList(Message mess)
+        public Message ChangePositionList(Message mess)
         {
             Message ids = JsonConvert.DeserializeObject<Message>(mess.args[2]);
             database.OpenConnection();
@@ -2485,8 +2895,9 @@ namespace DashBoardServer
             logger.WriteLog("{0} update test", UpdateTest.ToString());
 
             res.Add("ok");
+            return res;
         }
-        public void StopTests(Message mess)
+        public Message StopTests(Message mess)
         {
             Message message = new Message();
             for (int i = 1; i < mess.args.Count; i++)
@@ -2513,7 +2924,7 @@ namespace DashBoardServer
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
                 database.CloseConnection();
-                logger.WriteLog("Обновлены статусы наборов! Произведена остановка набора " + message.args[i]);
+                logger.WriteLog("Обновлены статусы наборов! Произведена остановка набора " + message.args[i]);//
             }
             for (int i = 0; i < message.args.Count; i += 2)
             {
@@ -2535,8 +2946,9 @@ namespace DashBoardServer
                 stopPack.Start(s);
             }
             res.Add("OK");
+            return res;
         }
-        public void StopAutotest(Message mess)
+        public Message StopAutotest(Message mess)
         {
             query = "UPDATE autostart SET `status` = 'no_start' WHERE `id` = @id AND `service` = @service";
             command = new MySqlCommand(query, database.connect);
@@ -2547,64 +2959,9 @@ namespace DashBoardServer
             database.CloseConnection();
             logger.WriteLog("Обновлен статус автостарта! Произведена остановка автостарта " + mess.args[0]);
             res.Add("OK");
+            return res;
         }
-        public void GetNowTests(Message mess)
-        {
-            Message message = new Message();
-
-            query = "SELECT * FROM demons WHERE `service` = @service";
-            command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            database.OpenConnection();
-            reader = command.ExecuteReader();
-            if (reader.HasRows)
-            {
-                while (reader.Read())
-                {
-                    res.Add(reader["ip"].ToString(), reader["id"].ToString(), reader["date"].ToString());
-                }
-
-            }
-            reader.Close();
-        }
-        public void GetPush(Message mess)
-        {
-            Message message = new Message();
-            while (true)
-            {
-                Thread.Sleep(1000);
-                query = "SELECT * FROM packs WHERE `service` = @service";
-                command = new MySqlCommand(query, database.connect);
-                command.Parameters.AddWithValue("@service", mess.args[0]);
-                database.OpenConnection();
-                reader = command.ExecuteReader();
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        if (message.args.Contains(reader["id"].ToString()))
-                        {
-                            if (message.args[message.args.IndexOf(reader["id"].ToString()) + 1] != reader["status"].ToString() && reader["status"].ToString() == "no_start")
-                            {
-                                res.Add("push", "pack", reader["id"].ToString());
-                                return;
-                            }
-                            message.args[message.args.IndexOf(reader["id"].ToString()) + 1] = reader["status"].ToString();
-                        }
-                        else
-                        {
-                            message.Add(reader["id"].ToString(), reader["status"].ToString());
-                        }
-                    }
-                }
-                else
-                {
-                    res.Add("no_pack");
-                    break;
-                }
-                reader.Close();
-            }
-        }
+        
         public Comments readTextOfTest(string service, string testId)
         {
             Comments comments = new Comments();
