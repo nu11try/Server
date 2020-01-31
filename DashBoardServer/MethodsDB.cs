@@ -1520,7 +1520,13 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
-           
+
+            query = "DELETE FROM session WHERE ip = @ip";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@ip", mess.args[1]);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
 
             query = "INSERT INTO session (`id`,`ip`,`service`)"
                 + "VALUES (@id,@ip, @service)";
@@ -2069,15 +2075,14 @@ namespace DashBoardServer
             Message message = new Message();
             time = DateTime.Now;
             sec = time.DayOfYear * 24 * 60 * 60 + time.Hour * 60 * 60 + time.Minute * 60 + time.Second;
-            query = "SELECT * FROM demons WHERE `service` = @service and `id`!= 'not'";
+            query = "SELECT * FROM demons WHERE `id`!= 'not'";
             command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", service);
             database.OpenConnection();
             reader = command.ExecuteReader();
             if (reader.HasRows)
             {
                 while (reader.Read())
-                    message.Add(reader["id"].ToString(), (sec - Int32.Parse(reader["date"].ToString())).ToString(), reader["ip"].ToString());
+                    message.Add(reader["id"].ToString(), (sec - Int32.Parse(reader["date"].ToString())).ToString(), reader["ip"].ToString(), reader["service"].ToString());
             }
             reader.Close();
             database.CloseConnection();
@@ -2096,15 +2101,25 @@ namespace DashBoardServer
             {
                 string me = JsonConvert.SerializeObject(message);
                 string met = JsonConvert.SerializeObject(test);
+                Message me1 = new Message();
                 while (reader.Read())
                 {
                     try
                     {
+                        me1.args.Clear();
                         string s = reader["service"].ToString();
                         Message servises = JsonConvert.DeserializeObject<Message>(reader["service"].ToString());
                         if (servises.args.Contains(service))
                         {
-                            connect.SendMsg("TestsNow", reader["ip"].ToString(), me);
+                            for (int i = 0; message.args.Count > i; i+=4)
+                            {
+                                // connect.SendMsg("TestsNow", reader["ip"].ToString(), me);
+                                if (servises.args.Contains(message.args[i+3]))
+                                {
+                                    me1.Add(message.args[i], message.args[i + 1], message.args[i + 2]);
+                                }
+                            }
+                            connect.SendMsg("TestsNow", reader["ip"].ToString(), JsonConvert.SerializeObject(me1));
                             connect.SendMsg("Push", reader["ip"].ToString(), met);
                         }
                     }

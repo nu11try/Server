@@ -10,7 +10,7 @@ namespace DashBoardServer
         public MySqlConnection connect;
         public Database()
         {
-            string server = "localhost";
+            string server = "172.31.191.200";
             string user = "admin";
             string dbName = "dashboard";
             string port = "3306";
