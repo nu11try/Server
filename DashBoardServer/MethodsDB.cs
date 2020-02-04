@@ -2031,9 +2031,10 @@ namespace DashBoardServer
             reader.Close();
             database.CloseConnection();
 
-            query = "SELECT * FROM statistic WHERE  `id`= @id and `last` = 'last'";
+            query = "SELECT * FROM statistic WHERE  `id`= @id and `last` = 'last' and `service` = @service";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", test.args[0]);
+            command.Parameters.AddWithValue("@service", service);
             database.OpenConnection();
             reader = command.ExecuteReader();
             if (reader.HasRows)
@@ -2101,6 +2102,7 @@ namespace DashBoardServer
             {
                 string me = JsonConvert.SerializeObject(message);
                 string met = JsonConvert.SerializeObject(test);
+                string ip = "";
                 Message me1 = new Message();
                 while (reader.Read())
                 {
@@ -2119,8 +2121,14 @@ namespace DashBoardServer
                                     me1.Add(message.args[i], message.args[i + 1], message.args[i + 2]);
                                 }
                             }
-                            connect.SendMsg("TestsNow", reader["ip"].ToString(), JsonConvert.SerializeObject(me1));
-                            connect.SendMsg("Push", reader["ip"].ToString(), met);
+                            var thread = new Thread(send);
+                            thread.Start();
+                            ip = reader["ip"].ToString();
+                            void send()
+                            {
+                                connect.SendMsg("TestsNow", ip, JsonConvert.SerializeObject(me1));
+                                connect.SendMsg("Push", ip, met);
+                            }
                         }
                     }
                     catch { }
