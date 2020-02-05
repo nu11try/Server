@@ -40,9 +40,10 @@ namespace DashBoardServer
             for (int i = 0; i < packs.args.Count - 1; i += 9) // нужно count-1 и i+=9 так как аргументов у набора 9 и в самом конце добавляется еще 1 ("Start") 
             {
                 address = packs.args[i + 3].Split(' ')[2];
-                /*try
+                try
                 {
-                    Process.Start("C:\\Users\\User\\Desktop\\RDP\\" + address + ".rdp");
+                    //Process.Start("C:\\Users\\User\\Desktop\\RDP\\" + address + ".rdp");
+                    Process.Start("C:\\Users\\nu11t\\Desktop\\RDP\\" + address + ".rdp");
                     Thread.Sleep(20000);
                     try { foreach (Process proc in Process.GetProcessesByName("mstsc")) proc.Kill(); }
                     catch (Exception ex) { Console.WriteLine(ex.Message); }
@@ -50,7 +51,7 @@ namespace DashBoardServer
                 catch(Exception ex)
                 {
                     Console.WriteLine("Машина не запустилась из-за - " + ex.Message);
-                }*/
+                }
                 
                 nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhssmmfff");
                 while (true)

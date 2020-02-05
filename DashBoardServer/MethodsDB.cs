@@ -40,7 +40,8 @@ namespace DashBoardServer
                 if (!mess.args[0].Equals("")) paramFun.args.Insert(0, mess.args[0]);
                 res = (Message)info.Invoke(o, new object[] { paramFun });
             }
-            else {
+            else
+            {
                 res = (Message)info.Invoke(o, new object[] { mess });
             }
             string resS = JsonConvert.SerializeObject(res);
@@ -182,7 +183,7 @@ namespace DashBoardServer
                     {
 
                     }
-                   
+
                 }
                 res.Add(time.ToString());
             }
@@ -863,7 +864,7 @@ namespace DashBoardServer
             reader = command.ExecuteReader();
             if (reader.HasRows)
             {
-                
+
                 while (reader.Read())
                 {
                     string date1 = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
@@ -890,7 +891,7 @@ namespace DashBoardServer
                                 res.Add(reader["date"].ToString() + "\n" + reader["version"].ToString().Replace(".", ":").Replace("_", "__"));
                         }
                     }
-                    
+
                 }
             }
             else
@@ -916,7 +917,7 @@ namespace DashBoardServer
             reader = command.ExecuteReader();
             if (reader.HasRows)
             {
-                
+
                 while (reader.Read())
                 {
                     string date1 = DateTime.Now.ToString("dd MMMM yyyy | HH:mm:ss");
@@ -925,10 +926,10 @@ namespace DashBoardServer
                     string mounthS = date.Split(' ')[1];
                     int day1 = Int32.Parse(date1.Split(' ')[0]);
                     string mounthS1 = date1.Split(' ')[1];
-                    if ((mounthS == mounthS1 && (day1 - day) <= 5) )
+                    if ((mounthS == mounthS1 && (day1 - day) <= 5))
                     {
-                            res.Add(reader["date"].ToString(), reader["result"].ToString(),
-                                reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
+                        res.Add(reader["date"].ToString(), reader["result"].ToString(),
+                            reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
                     }
                     else
                     {
@@ -938,7 +939,7 @@ namespace DashBoardServer
                         day1 = Int32.Parse(date1.Split(' ')[0]);
                         mounthS1 = date1.Split(' ')[1];
                         if ((mounthS == mounthS1 && (day1 - day + 30) <= 5))
-                        {
+                        {                            
                             res.Add(reader["date"].ToString(), reader["result"].ToString(),
                                 reader["version"].ToString(), reader["time_end"].ToString(), reader["id"].ToString(), reader["version"].ToString(), reader["sort"].ToString());
                         }
@@ -1775,11 +1776,11 @@ namespace DashBoardServer
 
 
             Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648Q");
-            
+
             Message issue = new Message();
-            
+
             var issues = from i in jira.Issues.Queryable
-                            where i.Key == mess.args[2]
+                         where i.Key == mess.args[2]
                          select i;
             issue.Add(mess.args[2], issues.First().Status.Name, issues.First().Summary, issues.First().Type.Name, issues.First().Assignee, issues.First().Created.Value.ToString());
 
@@ -2056,7 +2057,7 @@ namespace DashBoardServer
                 command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", mess.args[2]);
                 command.Parameters.AddWithValue("@ip", mess.args[1]);
-                command.Parameters.AddWithValue("@date",  ""+ sec);
+                command.Parameters.AddWithValue("@date", "" + sec);
             }
             else
             {
@@ -2070,8 +2071,6 @@ namespace DashBoardServer
             database.OpenConnection();
             var UpdateTest = command.ExecuteNonQuery();
             database.CloseConnection();
-
-           
 
             Message message = new Message();
             time = DateTime.Now;
@@ -2088,13 +2087,8 @@ namespace DashBoardServer
             reader.Close();
             database.CloseConnection();
 
-            
-            
-
-            ConnectClient connect = new ConnectClient();
             query = "SELECT * FROM session ";
             command = new MySqlCommand(query, database.connect);
-           
             command.Parameters.AddWithValue("@id", mess.args[1]);
             database.OpenConnection();
             reader = command.ExecuteReader();
@@ -2102,7 +2096,7 @@ namespace DashBoardServer
             {
                 string me = JsonConvert.SerializeObject(message);
                 string met = JsonConvert.SerializeObject(test);
-                string ip = "";
+
                 Message me1 = new Message();
                 while (reader.Read())
                 {
@@ -2113,22 +2107,16 @@ namespace DashBoardServer
                         Message servises = JsonConvert.DeserializeObject<Message>(reader["service"].ToString());
                         if (servises.args.Contains(service))
                         {
-                            for (int i = 0; message.args.Count > i; i+=4)
+                            for (int i = 0; message.args.Count > i; i += 4)
                             {
                                 // connect.SendMsg("TestsNow", reader["ip"].ToString(), me);
-                                if (servises.args.Contains(message.args[i+3]))
+                                if (servises.args.Contains(message.args[i + 3]))
                                 {
                                     me1.Add(message.args[i], message.args[i + 1], message.args[i + 2]);
                                 }
                             }
-                            var thread = new Thread(send);
-                            thread.Start();
-                            ip = reader["ip"].ToString();
-                            void send()
-                            {
-                                connect.SendMsg("TestsNow", ip, JsonConvert.SerializeObject(me1));
-                                connect.SendMsg("Push", ip, met);
-                            }
+                            send(reader["ip"].ToString(), JsonConvert.SerializeObject(me1), met);
+
                         }
                     }
                     catch { }
@@ -2137,6 +2125,16 @@ namespace DashBoardServer
             reader.Close();
             database.CloseConnection();
             return res;
+        }
+        static async void send(string ip, string param, string param2)
+        {
+            await Task.Run(() => sendTask(ip, param, param2));
+        }
+        static void sendTask(string ip, string param, string param2)
+        {
+            ConnectClient connect = new ConnectClient();
+            connect.SendMsg("TestsNow", ip, param);
+            connect.SendMsg("Push", ip, param2);
         }
         public Message UpdateServises(Message mess)
         {
@@ -2183,7 +2181,7 @@ namespace DashBoardServer
             if (reader.HasRows)
             {
                 DateTime time = DateTime.Now;
-               int sec = time.DayOfYear * 24 * 60 * 60 + time.Hour * 60 * 60 + time.Minute * 60 + time.Second;
+                int sec = time.DayOfYear * 24 * 60 * 60 + time.Hour * 60 * 60 + time.Minute * 60 + time.Second;
                 while (reader.Read())
                     res.Add(reader["id"].ToString(), (sec - Int32.Parse(reader["date"].ToString())).ToString(), reader["ip"].ToString());
             }
@@ -2191,7 +2189,7 @@ namespace DashBoardServer
             database.CloseConnection();
 
 
-       
+
             return res;
         }
         public Message UpdateTest(Message mess)
@@ -2984,7 +2982,7 @@ namespace DashBoardServer
             res.Add("OK");
             return res;
         }
-        
+
         public Comments readTextOfTest(string service, string testId)
         {
             Comments comments = new Comments();
