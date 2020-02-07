@@ -147,7 +147,7 @@ namespace DashBoardServer
         }
         public Message GetAllTests(Message mess)
         {
-            query = "Select * FROM tests WHERE `status`= 'add' ";
+            query = "Select * FROM tests WHERE `status`= 'add' and `service` = @service ";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
             database.OpenConnection();
@@ -163,35 +163,7 @@ namespace DashBoardServer
             database.CloseConnection();
             return res;
         }
-        public Message GetAllTime(Message mess)
-        {
-            query = "Select * FROM statistic WHERE `last`= 'last' ";
-            command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            database.OpenConnection();
-            reader = command.ExecuteReader();
-            int time = 0;
-            if (reader.HasRows)
-            {
-                while (reader.Read())
-                {
-                    try
-                    {
-                        time += Int32.Parse(reader["time_end"].ToString());
-                    }
-                    catch
-                    {
-
-                    }
-
-                }
-                res.Add(time.ToString());
-            }
-
-            reader.Close();
-            database.CloseConnection();
-            return res;
-        }
+        
         //----------------------------------------------------------------------------------
         // ФУНКЦИИ ПОЛУЧЕНИЯ
         //----------------------------------------------------------------------------------
@@ -364,6 +336,23 @@ namespace DashBoardServer
             database.CloseConnection();
             return res;
         }
+        public Message GetTestsWithBugs(Message mess)
+        {
+            query = "SELECT `test` FROM jira WHERE `service` = @service and `link` = @link";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@link", mess.args[1]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+
+            if (reader.HasRows)
+            {
+                while (reader.Read()) res.Add(reader["test"].ToString());
+            }
+            reader.Close();
+            database.CloseConnection();
+            return res;
+        }
         public Message GetStends(Message mess)
         {
             query = "SELECT `url` FROM stends WHERE `service` LIKE '" + mess.args[0].Substring(0, 3) + "%'";
@@ -401,6 +390,8 @@ namespace DashBoardServer
         /// </summary>
         /// <param name="service"></param>
         /// <returns></returns>
+        
+         
         public Message GetTests(Message mess)
         {
             //GetTestsPath(mess);
@@ -1272,6 +1263,44 @@ namespace DashBoardServer
             database.CloseConnection();
             return res;
         }
+        public Message GetBug(Message mess)
+        {
+            query = "SELECT  name, link, type, data, status, executor,  GROUP_CONCAT(`test`) as `test` FROM jira where `service` = @service and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive' group by `link`";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    res.Add(reader["name"].ToString(), reader["link"].ToString(), reader["type"].ToString(), reader["data"].ToString(), reader["status"].ToString(), reader["executor"].ToString(), reader["test"].ToString());
+                }
+            }
+
+            reader.Close();
+            database.CloseConnection();
+            return res;
+        }
+        public Message GetClosedBug(Message mess)
+        {
+            query = "SELECT name, link, type, data, status, executor,  GROUP_CONCAT(`test`) as `test` FROM jira where `service` = @service and (`status` = 'Закрыто' or `status` = 'Протестировано' or `status` = 'Отклонено' or `status` = 'Авторская приемка'or `status` = 'Archive') group by `link`";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            database.OpenConnection();
+            reader = command.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    res.Add(reader["name"].ToString(), reader["link"].ToString(), reader["type"].ToString(), reader["data"].ToString(), reader["status"].ToString(), reader["executor"].ToString(), reader["test"].ToString());
+                }
+            }
+
+            reader.Close();
+            database.CloseConnection();
+            return res;
+        }
         public Message GetErrorsStatus(string test)
         {
             query = "SELECT * FROM jira where `test` = @test and (`type` = 'Ошибка' or `type` = 'Доработка' or `type` = 'Компонентная доработка') and `status` <> 'Закрыто' and `status` <> 'Протестировано' and `status` <> 'Отклонено' and `status` <> 'Авторская приемка'and `status` <> 'Archive'";
@@ -1724,9 +1753,21 @@ namespace DashBoardServer
             res.Add("OK");
             return res;
         }
+        public Message ChangeBug(Message mess)
+        {
+            query = "DELETE FROM jira WHERE `service`= @service AND `link` = @link";
+            command = new MySqlCommand(query, database.connect);
+            command.Parameters.AddWithValue("@service", mess.args[0]);
+            command.Parameters.AddWithValue("@link", mess.args[1]);
+            database.OpenConnection();
+            command.ExecuteNonQuery();
+            database.CloseConnection();
+            AddBug(mess);
+            return res;
+        }
         public Message AddBug(Message mess)
         {
-            List<string> tests = new List<string>();
+            /*List<string> tests = new List<string>();
             query = "SELECT * FROM packs WHERE `service` = @service";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -1758,14 +1799,14 @@ namespace DashBoardServer
             }
             reader.Close();
             database.CloseConnection();
-            tests.Add(mess.args[1]);
-            for (int i = 0; i < tests.Count; i++)
+            tests.Add(mess.args[1]);*/
+            for (int i = 2; i < mess.args.Count; i++)
             {
                 query = "INSERT INTO jira (`test`, `link`,`status`,`service`)"
                 + "VALUES (@test, @link, 'В работе', @service)";
                 command = new MySqlCommand(query, database.connect);
-                command.Parameters.AddWithValue("@test", tests[i]);
-                command.Parameters.AddWithValue("@link", mess.args[2]);
+                command.Parameters.AddWithValue("@test", mess.args[i]);
+                command.Parameters.AddWithValue("@link", mess.args[1]);
                 command.Parameters.AddWithValue("@service", mess.args[0]);
                 database.OpenConnection();
                 var InsertTesult = command.ExecuteNonQuery();
@@ -1780,11 +1821,11 @@ namespace DashBoardServer
             Message issue = new Message();
 
             var issues = from i in jira.Issues.Queryable
-                         where i.Key == mess.args[2]
+                         where i.Key == mess.args[1]
                          select i;
-            issue.Add(mess.args[2], issues.First().Status.Name, issues.First().Summary, issues.First().Type.Name, issues.First().Assignee, issues.First().Created.Value.ToString());
+            issue.Add(mess.args[1], issues.First().Status.Name, issues.First().Summary, issues.First().Type.Name, issues.First().Assignee, issues.First().Created.Value.ToString());
 
-            reader.Close();
+            
             query = "UPDATE jira SET `status` = @status,`name` = @name, `type` = @type, `executor` = @executor, data = @data " +
                                   "WHERE `link` = @link";
             database.OpenConnection();
@@ -1952,45 +1993,57 @@ namespace DashBoardServer
         }
         public Message DeleteBug(Message mess)
         {
-            List<string> tests = new List<string>();
-            query = "SELECT * FROM packs WHERE `service` = @service";
-            command = new MySqlCommand(query, database.connect);
-            command.Parameters.AddWithValue("@service", mess.args[0]);
-            database.OpenConnection();
-            reader = command.ExecuteReader();
-            if (reader.HasRows)
+            if (mess.args.Count != 2)
             {
-                while (reader.Read())
+                /*List<string> tests = new List<string>();
+                query = "SELECT * FROM packs WHERE `service` = @service";
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                database.OpenConnection();
+                reader = command.ExecuteReader();
+                if (reader.HasRows)
                 {
-                    Tests test = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
-                    if (test.id.Contains(mess.args[1]))
+                    while (reader.Read())
                     {
-                        for (int i = 0; i < test.id.Count; i++)
+                        Tests test = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
+                        if (test.id.Contains(mess.args[1]))
                         {
-                            Message message = JsonConvert.DeserializeObject<Message>(test.dependon[i]);
-                            if (message.args.Contains(mess.args[1]))
+                            for (int i = 0; i < test.id.Count; i++)
                             {
-                                if (!tests.Contains(test.id[i]))
-                                    tests.Add(test.id[i]);
-                            }
-                            if (test.duplicate.Equals(mess.args[1]))
-                            {
-                                if (!tests.Contains(test.id[i]))
-                                    tests.Add(test.id[i]);
+                                Message message = JsonConvert.DeserializeObject<Message>(test.dependon[i]);
+                                if (message.args.Contains(mess.args[1]))
+                                {
+                                    if (!tests.Contains(test.id[i]))
+                                        tests.Add(test.id[i]);
+                                }
+                                if (test.duplicate.Equals(mess.args[1]))
+                                {
+                                    if (!tests.Contains(test.id[i]))
+                                        tests.Add(test.id[i]);
+                                }
                             }
                         }
                     }
                 }
-            }
-            reader.Close();
-            database.CloseConnection();
-            tests.Add(mess.args[1]);
-            for (int i = 0; i < tests.Count; i++)
-            {
+                reader.Close();
+                database.CloseConnection();
+                tests.Add(mess.args[1]);*/
+      
                 query = "DELETE FROM jira WHERE `test`= @test AND link = @link";
                 command = new MySqlCommand(query, database.connect);
-                command.Parameters.AddWithValue("@test", tests[i]);
+                command.Parameters.AddWithValue("@test", mess.args[1]);
                 command.Parameters.AddWithValue("@link", mess.args[2]);
+                database.OpenConnection();
+                command.ExecuteNonQuery();
+                database.CloseConnection();
+    
+            }
+            else
+            {
+                query = "DELETE FROM jira WHERE service = @service and  link = @link";
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@link", mess.args[1]);
                 database.OpenConnection();
                 command.ExecuteNonQuery();
                 database.CloseConnection();
