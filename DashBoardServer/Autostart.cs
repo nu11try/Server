@@ -90,7 +90,7 @@ namespace DashBoardServer
             }
             catch
             {
-                Console.WriteLine("Пиздец тайм чекеру пришел!");
+                Console.WriteLine("тайм чекеру пришел!");
             }
         }        
         static void startAuto(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)

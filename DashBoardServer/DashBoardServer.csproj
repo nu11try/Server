@@ -151,9 +151,6 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="DashBoardServer_TemporaryKey.pfx" />
-    <Content Include="DashBoardSQL.db">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

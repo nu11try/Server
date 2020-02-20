@@ -162,8 +162,7 @@ namespace DashBoardServer
             reader.Close();
             database.CloseConnection();
             return res;
-        }
-        
+        }        
         //----------------------------------------------------------------------------------
         // ФУНКЦИИ ПОЛУЧЕНИЯ
         //----------------------------------------------------------------------------------
@@ -389,9 +388,7 @@ namespace DashBoardServer
         /// Функция получения тестов определенного сервиса для отображения их в ListView
         /// </summary>
         /// <param name="service"></param>
-        /// <returns></returns>
-        
-         
+        /// <returns></returns>                
         public Message GetTests(Message mess)
         {
             //GetTestsPath(mess);
@@ -1337,7 +1334,7 @@ namespace DashBoardServer
         }
         public Message CheckErrors(Message mess)
         {
-            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648Q");
+            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "zuev.vladislav", "Psihopat0457");
             query = "SELECT `link` FROM jira where `service` = @service group by `link`";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@test", mess.args[1]);
@@ -1816,7 +1813,7 @@ namespace DashBoardServer
             res.Add("OK");
 
 
-            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "suhorukov.anton", "g8kyto648Q");
+            Jira jira = Jira.CreateRestClient("https://job-jira.otr.ru", "zuev.vladislav", "Psihopat0457");
 
             Message issue = new Message();
 
@@ -2668,6 +2665,19 @@ namespace DashBoardServer
             return res;
         }
         public Message UpdateStatusPack(Message mess)
+        {
+            foreach (var id in mess.args)
+            {
+                query = "UPDATE packs SET `status` = 'no_start' WHERE `id` = @id";
+                command = new MySqlCommand(query, database.connect);
+                command.Parameters.AddWithValue("@id", id);
+                database.OpenConnection();
+                command.ExecuteNonQuery();
+                database.CloseConnection();
+            }
+            return res;//
+        }
+        public Message UpdateStatusAllPack(Message mess)
         {
             foreach (var id in mess.args)
             {

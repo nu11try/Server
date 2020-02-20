@@ -35,7 +35,7 @@ namespace DashBoardServer
         {
             try
             {
-              //  Data.IP = "172.17.42.32";
+                //Data.IP = "172.17.42.32";
                 Data.IP = "172.31.191.200";                
                 Data.Port = 8888;
 
