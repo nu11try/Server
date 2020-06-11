@@ -108,7 +108,7 @@ namespace DashBoardServer
                             _utils.ClearWorkDir();
                             try
                             {
-                                AutoStartTestTask(autostart, database.connect, database, methodsDB);
+                                AutoStartTestTask(autostart, database, methodsDB);
                             }
                             catch (Exception ex)
                             {
@@ -125,7 +125,7 @@ namespace DashBoardServer
                 logger.WriteLog("Ошибка тайм-чекера автостарта! " + ex.Message, "ERROR");
             }
         }
-        static void startAuto(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)
+        static void startAuto(OptionsAutostart autostart, Database database, MethodsDB methodsDB)
         {
             try
             {
@@ -133,20 +133,11 @@ namespace DashBoardServer
                 mess.args.Insert(0, autostart.service);
 
                 string query = "UPDATE autostart SET `status` = 'start' WHERE `id` = @id";
-                MySqlCommand command = new MySqlCommand(query, connection);
+                MySqlCommand command = new MySqlCommand(query, database.connect);
                 command.Parameters.AddWithValue("@id", autostart.id);
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
                 database.CloseConnection();
-                try
-                {
-                    connection.Close();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Не смог закрыть connection.Close() в startAuto! " + ex.Message);
-                    logger.WriteLog("Не смог закрыть connection.Close() в startAuto! " + ex.Message, "ERROR");
-                }
                 methodsDB.StartTests(mess);
             }
             catch (Exception ex)
@@ -165,9 +156,9 @@ namespace DashBoardServer
             if (day.Equals("Sunday")) return "ВС";
             return null;
         }
-        static async void AutoStartTestTask(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)
+        static async void AutoStartTestTask(OptionsAutostart autostart, Database database, MethodsDB methodsDB)
         {
-            await Task.Run(() => startAuto(autostart, connection, database, methodsDB));
+            await Task.Run(() => startAuto(autostart, database, methodsDB));
         }
         public int transform(string time, bool after)
         {
