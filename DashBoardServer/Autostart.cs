@@ -50,13 +50,7 @@ namespace DashBoardServer
             // БЛОК ПРОВЕРКИ И УСТАНОВКИ ВРЕМЕНИ
             try
             {
-                //string time = GetCurTime();
-                //string timeVM = DateTime.Now.Hour + ":" + DateTime.Now.Minute;
                 if (DateTime.Now.Hour == 23) _utils.ClearWorkDir();
-                /*if (!time.Equals(timeVM))
-                {
-                    Process timeChanger = System.Diagnostics.Process.Start("cmd.exe", "/c time" + time);
-                }*/
             }
             catch (Exception ex)
             {
@@ -89,6 +83,16 @@ namespace DashBoardServer
                 reader.Close();
                 database.CloseConnection();
 
+                try
+                {
+                    database.connect.Close();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Не смог закрыть connection.Close()! " + ex.Message);
+                    logger.WriteLog("Не смог закрыть connection.Close()! " + ex.Message, "ERROR");
+                }
+
                 DateTime date = DateTime.Now;
                 string nowDay = transformDate(date.DayOfWeek.ToString());
 
@@ -99,25 +103,28 @@ namespace DashBoardServer
                         int time = transform(autostart.time, false);
                         int timeAfter = transform(autostart.time, true);
                         int now = transform(date.Hour.ToString() + ":" + date.Minute.ToString(), false);
-                        //Console.WriteLine(autostart.time + "--" + date.Hour.ToString() + ":" + date.Minute.ToString() + "--" + autostart.time);
-                        //Console.WriteLine(now + "--" + time + "--" + timeAfter);
-                        //if (now >= time && now <= timeAfter && autostart.status == "no_start")
                         if (now >= time && now <= timeAfter)
-                        {                            
+                        {
                             _utils.ClearWorkDir();
-                            AutoStartTestTask(autostart, database.connect, database, methodsDB);
-                            //Thread StartTests = new Thread(new ParameterizedThreadStart(startAuto));
-                            //StartTests.Start(autostart);
+                            try
+                            {
+                                AutoStartTestTask(autostart, database.connect, database, methodsDB);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine("Ошибка автозапуска в таске AutoStartTestTask! " + ex.Message);
+                                logger.WriteLog("Ошибка автозапуска в таске AutoStartTestTask! " + ex.Message, "ERROR");
+                            }
                         }
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine("тайм чекеру пришел! " + ex.Message);
-                logger.WriteLog("тайм чекеру пришел! " + ex.Message, "ERROR");
+                Console.WriteLine("Ошибка тайм-чекера автостарта! " + ex.Message);
+                logger.WriteLog("Ошибка тайм-чекера автостарта! " + ex.Message, "ERROR");
             }
-        }        
+        }
         static void startAuto(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)
         {
             try
@@ -130,12 +137,21 @@ namespace DashBoardServer
                 command.Parameters.AddWithValue("@id", autostart.id);
                 database.OpenConnection();
                 var UpdateTest = command.ExecuteNonQuery();
-                database.CloseConnection();                
+                database.CloseConnection();
+                try
+                {
+                    connection.Close();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Не смог закрыть connection.Close() в startAuto! " + ex.Message);
+                    logger.WriteLog("Не смог закрыть connection.Close() в startAuto! " + ex.Message, "ERROR");
+                }
                 methodsDB.StartTests(mess);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Ошибка = ", ex.Message);                
+                Console.WriteLine("Ошибка = ", ex.Message);
             }
         }
         public string transformDate(string day)
