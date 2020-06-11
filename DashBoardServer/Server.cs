@@ -29,10 +29,12 @@ namespace DashBoardServer
         //const string ip = "172.17.42.32";
         // const string ip = "127.0.0.1";
         //const string ip = "172.31.191.200";
-        static TcpListener listener;        
+        static TcpListener listener;
+
+        private static Utils _utils;
 
         static void Main(string[] args)
-        {
+        {            
             try
             {
                 //Data.IP = "172.17.42.32";

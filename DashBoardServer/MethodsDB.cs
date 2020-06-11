@@ -16,6 +16,7 @@ namespace DashBoardServer
 {
     class MethodsDB
     {
+        private static StartTests startTests = new StartTests();
         private Database database = new Database();
         private MySqlCommand command;
         private Logger logger = new Logger();
@@ -1613,8 +1614,6 @@ namespace DashBoardServer
         }
         public Message AddStatisticDemon(Message mess)
         {
-
-
             query = "UPDATE statistic SET `last` = @last where `id` = @id and `last` = 'last' and `service` = @service";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@id", mess.args[1]);
@@ -2063,7 +2062,6 @@ namespace DashBoardServer
         //-------------------------------------------------------------------------------------
         public Message updateTestsNow(Message mess)
         {
-
             query = "SELECT * FROM demons WHERE  `ip`= @ip";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@ip", mess.args[1]);
@@ -2490,141 +2488,10 @@ namespace DashBoardServer
 
             res.Add("OK");
             return res;
-        }
-        public Message StartTests(Message mess)
-        {
-            try
-            {
-                StartTests startTests = new StartTests();
-                Database database1 = new Database();
-
-                Message request = new Message();
-                Message dirs = new Message();
-                Tests tests = new Tests();
-                Tests tests1 = new Tests();
-                List<string> packs = new List<string>();
-                query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
-                command = new MySqlCommand(query, database.connect);
-                if (mess.args[1] == "no_pack")
-                {
-                    mess.args.RemoveAt(1);
-                    for (int i = 2; i < mess.args.Count; i++)
-                    {
-                        tests1.id.Add(mess.args[i]);
-                        mess.args.RemoveAt(i);
-                        i--;
-                    }
-                }
-                command.Parameters.AddWithValue("@service", mess.args[0]);
-                command.Parameters.AddWithValue("@id_pack", mess.args[1]);
-                for (int i = 1; i < mess.args.Count; i++)
-                {
-                    database.OpenConnection();
-                    reader = command.ExecuteReader();
-                    if (reader.HasRows)
-                    {
-                        while (reader.Read())
-                        {
-                            if (reader["status"].ToString() == "start")
-                            {
-                                reader.Close();
-                                database.CloseConnection();
-                                res.Add("START");
-                                return res;
-                            }
-                        }
-                    }
-                    reader.Close();
-                    database.CloseConnection();
-                }
-                if (mess.args.Count > 1)
-                {
-                    for (int i = 1; i < mess.args.Count; i++)
-                    {
-                        query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack AND " +
-                        "`status` = 'no_start'";
-                        command = new MySqlCommand(query, database.connect);
-                        command.Parameters.AddWithValue("@service", mess.args[0]);
-                        command.Parameters.AddWithValue("@id_pack", mess.args[i]);
-                        database.OpenConnection();
-                        reader = command.ExecuteReader();
-
-                        if (reader.HasRows)
-                        {
-                            while (reader.Read())
-                            {
-                                packs.Add(reader["id"].ToString());
-                                tests = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
-                                for (int j = 0; j < tests1.id.Count; j++)
-                                {
-                                    int q = tests.id.IndexOf(tests1.id[j]);
-                                    if (tests.id.Contains(tests1.id[j]))
-                                    {
-                                        tests1.id[j] = tests.id[q];
-                                        if (j == 0)
-                                            tests1.start.Add("Первый");
-                                        else
-                                            tests1.start.Add(tests1.id[j - 1]);
-                                        tests1.restart.Add(tests.restart[q]);
-                                        tests1.time.Add(tests.time[q]);
-                                        tests1.dependon.Add("{\"args\":[\"not\"]}");
-                                        tests1.duplicate.Add(tests.duplicate[q]);
-                                        tests1.browser.Add(tests.browser[q]);
-                                    }
-                                }
-                                if (tests1.id.Count != 0)
-                                    tests = tests1;
-                                for (int j = 0; j < tests.id.Count; j++)
-                                {
-                                    query = "SELECT `path` FROM dirs WHERE `service` = @service";
-                                    MySqlCommand command1 = new MySqlCommand(query, database1.connect);
-                                    command1.Parameters.AddWithValue("@service", mess.args[0]);
-                                    command1.Parameters.AddWithValue("@test", tests.id[j]);
-                                    database1.OpenConnection();
-                                    reader1 = command1.ExecuteReader();
-                                    if (reader1.HasRows)
-                                    {
-                                        reader1.Read();
-                                        dirs.Add(reader1["path"].ToString());
-                                    }
-                                    reader1.Close();
-                                    database1.CloseConnection();
-                                }
-                                request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), reader["ip"].ToString(), reader["time"].ToString(), JsonConvert.SerializeObject(tests), reader["browser"].ToString(), reader["count_restart"].ToString(), reader["stend"].ToString());
-
-                            }
-                        }
-                        reader.Close();
-                        database.CloseConnection();
-                    }
-                    request.Add("START");
-                    packs.ForEach(id =>
-                    {
-                        query = "UPDATE packs SET `status` = 'start' WHERE `id` = @id and `service` = @service";
-                        command = new MySqlCommand(query, database.connect);
-                        command.Parameters.AddWithValue("@id", id);
-                        command.Parameters.AddWithValue("@service", mess.args[0]);
-                        database.OpenConnection();
-                        var UpdateTest = command.ExecuteNonQuery();
-                        database.CloseConnection();
-                        logger.WriteLog("Обновлены статусы наборов! Произведен запуск набора " + id);
-                    });
-                    Thread startPack = new Thread(new ParameterizedThreadStart(startTests.Event));
-                    startPack.Start(request);
-                    res.Add("OK");
-
-                }
-                else res.Add("ERROR");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error " + ex.Message);
-            }
-            return res;
-        }
+        }        
         public Message UpdateStatusAutostart(Message mess)
         {
-            query = "UPDATE autostart SET `status` = 'no_start' WHERE `status` = 'start' AND `service`= @service " +
+            query = "UPDATE autostart SET `status` = 'no_start' WHERE `service`= @service " +
                 "AND `packs` Like '%" + mess.args[1] + "%'";
             command = new MySqlCommand(query, database.connect);
             command.Parameters.AddWithValue("@service", mess.args[0]);
@@ -3045,7 +2912,140 @@ namespace DashBoardServer
             res.Add("OK");
             return res;
         }
+        public Message StartTests(Message mess)
+        {
+            try
+            {                
+                Database database1 = new Database();
 
+                Message request = new Message();
+                Message dirs = new Message();
+                Tests tests = new Tests();
+                Tests tests1 = new Tests();
+                List<string> packs = new List<string>();
+                query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
+                command = new MySqlCommand(query, database.connect);
+                if (mess.args[1] == "no_pack")
+                {
+                    mess.args.RemoveAt(1);
+                    for (int i = 2; i < mess.args.Count; i++)
+                    {
+                        tests1.id.Add(mess.args[i]);
+                        mess.args.RemoveAt(i);
+                        i--;
+                    }
+                }
+                command.Parameters.AddWithValue("@service", mess.args[0]);
+                command.Parameters.AddWithValue("@id_pack", mess.args[1]);
+                /*for (int i = 1; i < mess.args.Count; i++)
+                {
+                    database.OpenConnection();
+                    reader = command.ExecuteReader();
+                    if (reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            if (reader["status"].ToString() == "start")
+                            {
+                                reader.Close();
+                                database.CloseConnection();
+                                res.Add("START");
+                                return res;
+                            }
+                        }
+                    }
+                    reader.Close();
+                    database.CloseConnection();
+                }*/
+                if (mess.args.Count > 1)
+                {
+                    for (int i = 1; i < mess.args.Count; i++)
+                    {
+                        query = "SELECT * FROM packs WHERE `service` = @service AND `id` = @id_pack";
+                        command = new MySqlCommand(query, database.connect);
+                        command.Parameters.AddWithValue("@service", mess.args[0]);
+                        command.Parameters.AddWithValue("@id_pack", mess.args[i]);
+                        database.OpenConnection();
+                        reader = command.ExecuteReader();
+
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                packs.Add(reader["id"].ToString());
+                                tests = JsonConvert.DeserializeObject<Tests>(reader["tests"].ToString());
+                                for (int j = 0; j < tests1.id.Count; j++)
+                                {
+                                    int q = tests.id.IndexOf(tests1.id[j]);
+                                    if (tests.id.Contains(tests1.id[j]))
+                                    {
+                                        tests1.id[j] = tests.id[q];
+                                        if (j == 0)
+                                            tests1.start.Add("Первый");
+                                        else
+                                            tests1.start.Add(tests1.id[j - 1]);
+                                        tests1.restart.Add(tests.restart[q]);
+                                        tests1.time.Add(tests.time[q]);
+                                        tests1.dependon.Add("{\"args\":[\"not\"]}");
+                                        tests1.duplicate.Add(tests.duplicate[q]);
+                                        tests1.browser.Add(tests.browser[q]);
+                                    }
+                                }
+                                if (tests1.id.Count != 0)
+                                    tests = tests1;
+                                for (int j = 0; j < tests.id.Count; j++)
+                                {
+                                    query = "SELECT `path` FROM dirs WHERE `service` = @service";
+                                    MySqlCommand command1 = new MySqlCommand(query, database1.connect);
+                                    command1.Parameters.AddWithValue("@service", mess.args[0]);
+                                    command1.Parameters.AddWithValue("@test", tests.id[j]);
+                                    database1.OpenConnection();
+                                    reader1 = command1.ExecuteReader();
+                                    if (reader1.HasRows)
+                                    {
+                                        reader1.Read();
+                                        dirs.Add(reader1["path"].ToString());
+                                    }
+                                    reader1.Close();
+                                    database1.CloseConnection();
+                                }
+                                request.Add(mess.args[0], mess.args[i], JsonConvert.SerializeObject(dirs), reader["ip"].ToString(), reader["time"].ToString(), JsonConvert.SerializeObject(tests), reader["browser"].ToString(), reader["count_restart"].ToString(), reader["stend"].ToString());
+
+                            }
+                        }
+                        reader.Close();
+                        database.CloseConnection();
+                    }
+                    request.Add("START");
+                    packs.ForEach(id =>
+                    {
+                        query = "UPDATE packs SET `status` = 'start' WHERE `id` = @id and `service` = @service";
+                        command = new MySqlCommand(query, database.connect);
+                        command.Parameters.AddWithValue("@id", id);
+                        command.Parameters.AddWithValue("@service", mess.args[0]);
+                        database.OpenConnection();
+                        var UpdateTest = command.ExecuteNonQuery();
+                        database.CloseConnection();
+                        logger.WriteLog("Обновлены статусы наборов! Произведен запуск набора " + id);
+                    });
+                    StartPack(request);
+                    //Thread startPack = new Thread(new ParameterizedThreadStart(startTests.Event));
+                    //startPack.Start(request);
+                    res.Add("OK");
+
+                }
+                else res.Add("ERROR");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error " + ex.Message);
+            }
+            return res;
+        }
+        static async void StartPack(object Response)
+        {
+            await Task.Run(() => startTests.Event(Response));
+        }
         public Comments readTextOfTest(string service, string testId)
         {
             Comments comments = new Comments();

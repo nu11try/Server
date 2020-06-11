@@ -11,10 +11,10 @@ namespace DashBoardServer
         public Database()
         {
             string server = "localhost";
-            string user = "admin";
+            string user = "vladislav";
             string dbName = "dashboard";
             string port = "3306";
-            string password = "root";
+            string password = "qwerty123";
             string connStr = "server=" + server + ";user=" + user +
                 ";database=" + dbName +
                 ";port=" + port +

@@ -20,6 +20,8 @@ namespace DashBoardServer
         private RequestDemon request = new RequestDemon();
         string bufJSON;
         string nameText = "";
+        private Logger log = new Logger();
+        private DateTime date = DateTime.Now;
 
         byte[] data;
         string param;
@@ -42,15 +44,19 @@ namespace DashBoardServer
                 address = packs.args[i + 3].Split(' ')[2];
                 try
                 {
-                    //Process.Start("C:\\Users\\User\\Desktop\\RDP\\" + address + ".rdp");
-                    Process.Start("C:\\Users\\nu11t\\Desktop\\RDP\\" + address + ".rdp");
-                    Thread.Sleep(20000);
-                    try { foreach (Process proc in Process.GetProcessesByName("mstsc")) proc.Kill(); }
-                    catch (Exception ex) { Console.WriteLine(ex.Message); }
+                    Console.WriteLine("Текущее время - " + date.Hour + ". Запускаем если время будет после 19:00");
+                    if (date.Hour >= 19)
+                    {
+                        Process.Start("C:\\Users\\User\\Desktop\\RDP\\" + address + ".rdp");
+                        //Process.Start("C:\\Users\\nu11t\\Desktop\\RDP\\" + address + ".rdp");
+                        Thread.Sleep(20000);
+                        try { foreach (Process proc in Process.GetProcessesByName("mstsc")) proc.Kill(); }
+                        catch (Exception ex) { Console.WriteLine(ex.Message); }
+                    }
                 }
                 catch(Exception ex)
                 {
-                    Console.WriteLine("Машина не запустилась из-за - " + ex.Message);
+                    log.WriteLog("Машина " + address + " ( C:\\Users\\User\\Desktop\\RDP\\" + address + ".rdp ) не запустилась из-за - " + ex.Message);
                 }
                 
                 nameText = "\\" + DateTime.Now.ToString("ddMMyyyyhhssmmfff");

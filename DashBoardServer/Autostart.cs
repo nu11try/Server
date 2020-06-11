@@ -4,8 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,13 +19,14 @@ namespace DashBoardServer
         private Database database = new Database();
         private MySqlCommand command;
         private MySqlDataReader reader;
-        private MySqlDataReader reader1;
-        private Logger logger = new Logger();
+        private static Logger logger = new Logger();
         private string query = "";
         List<OptionsAutostart> options = new List<OptionsAutostart>();
         Timer timer;
         TimerCallback tm;
         MethodsDB methodsDB = new MethodsDB();
+
+        private Utils _utils;
         public class OptionsAutostart
         {
             public string id { get; set; }
@@ -42,6 +46,23 @@ namespace DashBoardServer
         }
         public void CheckTime(object obj)
         {
+            _utils = new Utils();
+            // БЛОК ПРОВЕРКИ И УСТАНОВКИ ВРЕМЕНИ
+            try
+            {
+                //string time = GetCurTime();
+                //string timeVM = DateTime.Now.Hour + ":" + DateTime.Now.Minute;
+                if (DateTime.Now.Hour == 23) _utils.ClearWorkDir();
+                /*if (!time.Equals(timeVM))
+                {
+                    Process timeChanger = System.Diagnostics.Process.Start("cmd.exe", "/c time" + time);
+                }*/
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ошибка установки времени " + ex.Message);
+                logger.WriteLog("Ошибка установки времени " + ex.Message, "ERROR");
+            }
             try
             {
                 options = new List<OptionsAutostart>();
@@ -78,9 +99,12 @@ namespace DashBoardServer
                         int time = transform(autostart.time, false);
                         int timeAfter = transform(autostart.time, true);
                         int now = transform(date.Hour.ToString() + ":" + date.Minute.ToString(), false);
-                        Console.WriteLine(autostart.time + "--" + date.Hour.ToString() + ":" + date.Minute.ToString() + "--" + autostart.time);
-                        if (now >= time && now <= timeAfter && autostart.status == "no_start")
-                        {
+                        //Console.WriteLine(autostart.time + "--" + date.Hour.ToString() + ":" + date.Minute.ToString() + "--" + autostart.time);
+                        //Console.WriteLine(now + "--" + time + "--" + timeAfter);
+                        //if (now >= time && now <= timeAfter && autostart.status == "no_start")
+                        if (now >= time && now <= timeAfter)
+                        {                            
+                            _utils.ClearWorkDir();
                             AutoStartTestTask(autostart, database.connect, database, methodsDB);
                             //Thread StartTests = new Thread(new ParameterizedThreadStart(startAuto));
                             //StartTests.Start(autostart);
@@ -88,9 +112,10 @@ namespace DashBoardServer
                     }
                 });
             }
-            catch
+            catch (Exception ex)
             {
-                Console.WriteLine("тайм чекеру пришел!");
+                Console.WriteLine("тайм чекеру пришел! " + ex.Message);
+                logger.WriteLog("тайм чекеру пришел! " + ex.Message, "ERROR");
             }
         }        
         static void startAuto(OptionsAutostart autostart, MySqlConnection connection, Database database, MethodsDB methodsDB)
@@ -110,8 +135,7 @@ namespace DashBoardServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Ошибка = ", ex.Message);
-                Console.WriteLine("Вот и старт авто наебнулся!");
+                Console.WriteLine("Ошибка = ", ex.Message);                
             }
         }
         public string transformDate(string day)
@@ -133,6 +157,30 @@ namespace DashBoardServer
         {
             int m = (Int32.Parse(time.Split(':')[0]) * 60 + Int32.Parse(time.Split(':')[1])) * 60000;
             return after ? m + 90000 : m;
+        }
+        static string GetCurTime()
+        {
+            string result = "";
+            try
+            {
+                WebRequest req = WebRequest.Create("https://time-in.ru/");
+                WebResponse resp = req.GetResponse();
+                Stream stream = resp.GetResponseStream();
+                StreamReader sr = new System.IO.StreamReader(stream);
+                string html = sr.ReadToEnd();
+                sr.Close();
+                Regex myReg = new Regex(@"(G:i:s)...........");
+                Match match = myReg.Match(html);
+                result = match.Value.Split('>')[1];
+                result = result.Split('<')[0];
+                result = result.Split(':')[0] + ":" + result.Split(':')[1];
+            }
+            catch (Exception ex)
+            {
+                logger.WriteLog("Невозможно получить точное время по причине " + ex.Message, "ERROR");
+                Console.WriteLine("Невозможно получить точное время по причине " + ex.Message);
+            }
+            return result;
         }
     }
 }
